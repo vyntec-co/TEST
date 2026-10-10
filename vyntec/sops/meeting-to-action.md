@@ -287,7 +287,7 @@ These need real values before the SOP runs cleanly. The four task-list rows repl
 | Task placement — Internal / vyntec ops | Client = `vyntec internal` |
 | Platform location (sub-account) for Precinct pipeline | `[location]` |
 | Platform pipeline + stage names | `[pipeline: stages]` |
-| Drive root folder for meeting records | `[folder link]` |
+| Drive root folder for meeting records | `VYNTEC Internal / Meetings` — https://drive.google.com/drive/folders/1t4e_Hz1I6kuyjlrwMK1fgvimJwR4_gGP (folder ID `1t4e_Hz1I6kuyjlrwMK1fgvimJwR4_gGP`, owner info@vyntec.co) |
 | Primary transcript source | Granola / Zoom |
 | Email signature block | `[signature]` |
 
