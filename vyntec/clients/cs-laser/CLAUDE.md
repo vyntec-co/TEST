@@ -2,6 +2,7 @@
 
 - Legal name: CS Laser LLC per Courtney's Oct 6 answers, but the live product terms in the build say "Clean Slate Laser, LLC." NEEDS HUMAN: Vinny confirms with Courtney; keep the business name out of new form wording until then (found 2026-10-10). Client contact: Courtney.
 - leadconnector location ID: `MnKKwFSetGRCrkXj7pBU` ("CS Laser Orlando", REAL: list_locations 2026-10-10). Notion Client value: `CS Laser`.
+- Access (phase 4 check, 2026-10-10): REACHABLE. list_locations lists it and a read (get-custom-fields) returned 200. Client sub-accounts are READ ONLY this phase: no writes.
 - Courtney's Oct 6 answers (legal name, policies, hours, session lengths, packages and prices, package rules) are in the Vyntec sub-account conversation. Read them before treating package, price, deposit, expiry, refund, no-show, transfer or missed-installment questions as open.
 
 ## Consent, intake and health forms (forms-consent-engineer)
