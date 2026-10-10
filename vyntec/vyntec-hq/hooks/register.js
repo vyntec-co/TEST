@@ -1,6 +1,18 @@
 // vyntec-hq mod v1: approval guards, white-label guard, /client, cockpit pane, cheap-model routing.
 import { atom, read, update } from 'claude-code'
 
+// leadconnector operations by ID, from search_operations/describe_operation. Classes:
+//   read    → allowed (still refused when aimed at a location other than the active client's)
+//   write   → allowed only for the active client's location and only while it has an Approved task
+//   blocked → always refused (sends messages; payments, invoices, subscriptions, phone system, billing)
+// An ID missing from this table is refused, naming the ID.
+export const GHL_OPS = {
+  'get-contact': 'read',
+  'create-note': 'write',
+  'send-a-new-message': 'blocked',
+  /*GHL_OPS_TABLE*/
+}
+
 export const TASKS_DS = 'collection://7f6f9759-bbbf-45aa-ab9a-b2448918a625'
 // Connector tools are named by their server, which differs per machine (mcp__Notion__…, mcp__claude_ai_Notion__…):
 // find the connected tool by its suffix, falling back to this session's spelling.
@@ -25,8 +37,7 @@ const cockpit = atom({ plugin: 'vyntec-hq', key: 'cockpit' }, { review: [], bloc
 export const VENDOR = /gohighlevel|go high level|highlevel|leadconnector|\bghl\b/i
 // Sends, publishes, charges, spends, deletes. Gmail create_draft/update_draft carry none of these words.
 const OUTWARD = /send|forward|reply|respond|publish|deploy|delete|trash|remove|purge|charge|refund|pay|purchase|checkout|spam|share_file|invite|generate|upscale|outpaint|reframe|dubbing|voice_change|create_voice|motion_control|execute_preset|influencer|shorts_studio_create|remix/i
-const GHL_OUTWARD = /send|delete|remove|refund|charge|payment|invoice|order|subscription|transaction|coupon|campaign|publish|bulk/i
-const GHL_READ = /^(get|list|search|lookup|count|check|find)-/i
+const GHL_META = new Set(['list_locations', 'search_operations', 'describe_operation'])
 
 // What a tool call answered, as text: core sets `text`; a hook's own answer may carry only content blocks.
 const toText = ran => ran.text ?? (Array.isArray(ran.result) ? ran.result.map(b => b?.text ?? '').join('\n') : JSON.stringify(ran.result ?? ''))
@@ -34,18 +45,34 @@ const toText = ran => ran.text ?? (Array.isArray(ran.result) ? ran.result.map(b 
 const isGhl = tool => /^mcp__(claude_ai_)?leadconnector__/i.test(tool)
 const clientFacingPath = p => typeof p === 'string' && (/\/deliverables\//.test(p) || /\.html?$/i.test(p))
 
-// Returns { deny } | { needsApproved: true } | null (allowed).
-export function judge(e) {
+// Where a platform call is aimed: top-level locationId, or one inside params (flat or grouped).
+export const targetLocation = e => {
+  const p = e.params ?? {}
+  return e.locationId ?? p.locationId ?? p.path?.locationId ?? p.query?.locationId ?? p.body?.locationId
+}
+
+function judgeGhl(e, active) {
   const tool = String(e.tool)
-  if (isGhl(tool)) {
-    if (!/execute_operation$/.test(tool)) return null // search/describe/list_locations are reads
-    if (e.dryRun === true) return null
-    const op = String(e.operationId ?? '')
-    if (GHL_OUTWARD.test(op)) return { deny: `vyntec guard: platform operation "${op}" sends, charges or deletes. That needs Vinny's explicit yes and a human runs it.` }
-    if (GHL_READ.test(op)) return null
-    if (VENDOR.test(JSON.stringify(e.params ?? {}))) return { deny: 'vyntec white-label guard: this platform write names the underlying vendor. Rewrite it as "the platform" / link.vyntec.co / Union OS.' }
-    return { needsApproved: true }
-  }
+  const verb = tool.split('__').pop() ?? ''
+  if (GHL_META.has(verb)) return null
+  if (verb !== 'execute_operation') return { deny: `vyntec platform guard: unknown platform tool "${verb}".` }
+  const op = String(e.operationId ?? '')
+  const cls = Object.hasOwn(GHL_OPS, op) ? GHL_OPS[op] : undefined
+  if (cls === undefined) return { deny: `vyntec platform guard: unknown operation ID "${op}". It is not in GHL_OPS (register.js); check it with describe_operation and add it there first.` }
+  if (cls === 'blocked') return { deny: `vyntec platform guard: "${op}" sends messages or touches payments, invoices, subscriptions, the phone system or billing. Always refused; a human does it.` }
+  const loc = targetLocation(e)
+  if (active?.locationId && loc && loc !== active.locationId) return { deny: `vyntec platform guard: "${op}" is aimed at location ${loc}, but the active client is ${active.name} (${active.locationId}). Run /client for that client first.` }
+  if (cls === 'read' || e.dryRun === true) return null
+  if (!active) return { deny: `vyntec platform guard: "${op}" is a write and no client is active. Run /client <slug>, and have Vinny approve the task first.` }
+  if (loc !== active.locationId) return { deny: `vyntec platform guard: "${op}" is a write; pass locationId ${active.locationId} (${active.name}) explicitly.` }
+  if (VENDOR.test(JSON.stringify(e.params ?? {}))) return { deny: 'vyntec white-label guard: this platform write names the underlying vendor. Rewrite it as "the platform" / link.vyntec.co / Union OS.' }
+  return { needsApproved: true }
+}
+
+// Returns { deny } | { needsApproved: true } | null (allowed). `active` is the /client selection, or null.
+export function judge(e, active = null) {
+  const tool = String(e.tool)
+  if (isGhl(tool)) return judgeGhl(e, active)
   if (/^mcp__/.test(tool) && !/^mcp__claude-code-remote__/.test(tool)) {
     const verb = tool.split('__').pop() ?? ''
     if (/gmail/i.test(tool) && /^(create|update)_draft$/.test(verb)) {
@@ -82,7 +109,8 @@ export async function hasApprovedTask($, notionClient) {
 export function parseClient(slug, text) {
   const name = /^#\s*Client:\s*(.+?)\s*\(slug/m.exec(text)?.[1] ?? slug
   const notionClient = /Notion Client value:\s*`([^`]+)`/.exec(text)?.[1] ?? name
-  return { slug, name, notionClient }
+  const locationId = /leadconnector location ID:\s*`([^`]+)`/.exec(text)?.[1] ?? null
+  return { slug, name, notionClient, locationId }
 }
 
 // e. Cockpit data: review queue, NEEDS HUMAN (Blocked) and today's events.
@@ -155,16 +183,15 @@ export function summary(c) {
 
 export const register = on => {
   on('tool.call', async ($, e, next) => {
-    const verdict = judge(e)
+    const active = isGhl(String(e.tool)) ? await read($, client) : null
+    const verdict = judge(e, active)
     if (verdict === null) return next(e)
     if (verdict.deny) return { deny: verdict.deny }
-    const active = await read($, client)
-    if (!active) return { deny: 'vyntec GHL write guard: no active client. Run /client <slug>, and have Vinny approve the task in Notion first.' }
     let ok = false
     try { ok = await hasApprovedTask($, active.notionClient) } catch (err) {
-      return { deny: `vyntec GHL write guard: could not check Notion for an Approved task (${String(err?.message ?? err).slice(0, 120)}). Not writing.` }
+      return { deny: `vyntec platform guard: could not check Notion for an Approved task (${String(err?.message ?? err).slice(0, 120)}). Not writing.` }
     }
-    return ok ? next(e) : { deny: `vyntec GHL write guard: no vyntec Tasks entry for ${active.name} has status Approved. Put the plan in Needs your review and wait for Vinny's approval.` }
+    return ok ? next(e) : { deny: `vyntec platform guard: no vyntec Tasks entry for ${active.name} has status Approved. Put the plan in Needs your review and wait for Vinny's approval.` }
   }).catch(($, e, next) => {
     // Re-entry (a call made beneath this hook's own $ call): judge without awaiting anything.
     if (next.error?.kind === 're-entry') { const v = judge(e); return v === null ? next(e) : { deny: v.deny ?? 'vyntec guard: platform write refused during a nested call.' } }

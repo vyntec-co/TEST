@@ -1,4 +1,4 @@
-export type VyntecClient = { slug: string; name: string; notionClient: string }
+export type VyntecClient = { slug: string; name: string; notionClient: string; locationId: string | null }
 export type CockpitTask = { url: string; name: string; client: string; agent: string }
 export type CockpitEvent = { time: string; title: string }
 export type Cockpit = {

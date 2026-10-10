@@ -11,6 +11,13 @@ claude plugin install vyntec-hq@vyntec
 ```
 Then `/plugin` shows vyntec-hq, `/agents` lists the vyntec-hq agents, and `/client cs-laser` sets the client. Edits to `~/vyntec/vyntec-hq` take effect after `/reload-plugins`.
 
+## HighLevel connection (leadconnector)
+The plugin ships no `.mcp.json`: in the build session leadconnector was already connected through the claude.ai sign-in, and a second copy would make two servers. On your PC, run `/mcp` first. If leadconnector is there and connected, you're done. Only if it's missing, add `vyntec-hq/.mcp.json`:
+```json
+{ "mcpServers": { "leadconnector": { "type": "http", "url": "https://services.leadconnectorhq.com/mcp/anthropic/v2" } } }
+```
+then `/reload-plugins`, open `/mcp`, sign in to LeadConnector and pick the sub-accounts to allow.
+
 ## Checks
 ```
 claude plugin validate ~/vyntec/vyntec-hq

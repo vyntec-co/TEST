@@ -14,7 +14,8 @@ const connectors = (on, approvedRows: boolean) => {
   on('tool.call', { tool: DRAFT }, () => ({ result: [{ type: 'text', text: 'draft saved' }] }))
 }
 // The kit has no disk: answer the client file read with its real opening lines.
-const CS_LASER = '# Client: CS Laser Orlando (slug: cs-laser)\n\n- Sub-account locationId: MnKKwFSetGRCrkXj7pBU. Notion Client value: `CS Laser`.\n'
+const CS_LASER = '# Client: CS Laser Orlando (slug: cs-laser)\n\n- leadconnector location ID: `MnKKwFSetGRCrkXj7pBU` ("CS Laser Orlando"). Notion Client value: `CS Laser`.\n'
+const CS_LOC = 'MnKKwFSetGRCrkXj7pBU'
 const clientFile = on => on('fs.read', ($, e, next) => (/clients\/cs-laser\/CLAUDE\.md$/.test(e.path) ? { value: CS_LASER } : next(e)))
 const refused = (r: { deny?: string; isError?: boolean; text?: string }) => r.deny !== undefined || r.isError === true
 const reason = (r: { deny?: string; text?: string }) => String(r.deny ?? r.text ?? '')
@@ -44,7 +45,7 @@ test('a platform write is refused without an Approved task', async ($, on) => {
   clientFile(on)
   const set = await $.command.run({ command: 'client', args: 'cs-laser' })
   expect(set.text).toMatch(/CS Laser/)
-  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', params: { contactId: 'c1', body: 'Call recap' } } as never)
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'Call recap' } } as never)
   expect(refused(r)).toBe(true)
   expect(reason(r)).toMatch(/Approved/)
 })
@@ -53,7 +54,7 @@ test('a platform write is allowed with an Approved task', async ($, on) => {
   connectors(on, true)
   clientFile(on)
   await $.command.run({ command: 'client', args: 'cs-laser' })
-  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', params: { contactId: 'c1', body: 'Call recap' } } as never)
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'Call recap' } } as never)
   expect(refused(r)).toBe(false)
 })
 
@@ -61,7 +62,7 @@ test('a platform send is refused even with an Approved task', async ($, on) => {
   connectors(on, true)
   clientFile(on)
   await $.command.run({ command: 'client', args: 'cs-laser' })
-  const r = await $.tool.call({ tool: GHL, operationId: 'send-a-new-message', params: { type: 'SMS', message: 'hi' } } as never)
+  const r = await $.tool.call({ tool: GHL, operationId: 'send-a-new-message', locationId: CS_LOC, params: { type: 'SMS', message: 'hi' } } as never)
   expect(refused(r)).toBe(true)
 })
 
@@ -114,4 +115,37 @@ test('the claude.ai connector spelling of the platform tool is guarded too', asy
   on('tool.call', { tool: 'mcp__claude_ai_leadconnector__execute_operation' }, () => ({ result: [{ type: 'text', text: 'sent' }] }))
   const r = await $.tool.call({ tool: 'mcp__claude_ai_leadconnector__execute_operation', operationId: 'send-a-new-message', params: {} } as never)
   expect(refused(r)).toBe(true)
+})
+
+test('a platform read operation is allowed', async ($, on) => {
+  connectors(on, false)
+  const r = await $.tool.call({ tool: GHL, operationId: 'get-contact', locationId: CS_LOC, params: { contactId: 'c1' } } as never)
+  expect(refused(r)).toBe(false)
+})
+
+test('list_locations, search_operations and describe_operation are allowed', async ($, on) => {
+  const verbs = ['list_locations', 'search_operations', 'describe_operation']
+  for (const verb of verbs) on('tool.call', { tool: `mcp__leadconnector__${verb}` }, () => ({ result: [{ type: 'text', text: '{}' }] }))
+  for (const verb of verbs) {
+    const r = await $.tool.call({ tool: `mcp__leadconnector__${verb}`, query: 'x', operationId: 'get-contact' } as never)
+    expect(refused(r)).toBe(false)
+  }
+})
+
+test('an unknown operation ID is refused and named', async ($, on) => {
+  connectors(on, true)
+  clientFile(on)
+  await $.command.run({ command: 'client', args: 'cs-laser' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'frobnicate-everything', locationId: CS_LOC, params: {} } as never)
+  expect(refused(r)).toBe(true)
+  expect(reason(r)).toMatch(/frobnicate-everything/)
+})
+
+test('a write to another location than the active client is refused', async ($, on) => {
+  connectors(on, true)
+  clientFile(on)
+  await $.command.run({ command: 'client', args: 'cs-laser' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: 'N3zKau5efQgmMBf9XUGj', params: { contactId: 'c1', body: 'x' } } as never)
+  expect(refused(r)).toBe(true)
+  expect(reason(r)).toMatch(/N3zKau5efQgmMBf9XUGj/)
 })

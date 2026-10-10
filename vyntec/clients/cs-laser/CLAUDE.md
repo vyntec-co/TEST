@@ -1,7 +1,7 @@
 # Client: CS Laser Orlando (slug: cs-laser)
 
 - Legal name: CS Laser LLC. Client contact: Courtney.
-- Sub-account locationId: MnKKwFSetGRCrkXj7pBU. Notion Client value: `CS Laser`.
+- leadconnector location ID: `MnKKwFSetGRCrkXj7pBU` ("CS Laser Orlando", REAL: list_locations 2026-10-10). Notion Client value: `CS Laser`.
 - Courtney's Oct 6 answers (legal name, policies, hours, session lengths, packages and prices, package rules) are in the Vyntec sub-account conversation. Read them before treating package, price, deposit, expiry, refund, no-show, transfer or missed-installment questions as open.
 
 ## Consent, intake and health forms (forms-consent-engineer)
