@@ -281,12 +281,12 @@ These need real values before the SOP runs cleanly. The four task-list rows repl
 
 | Setting | Value |
 |---|---|
-| Task placement — Precinct prospects | `[Client / Department value]` |
+| Task placement — Precinct prospects | `[Client / Department value]` — Precinct only; not needed until Precinct prospect meetings are processed |
 | Task placement — Clients | Client = the Client value given in `clients/<slug>/CLAUDE.md` |
 | Task placement — Partners/Vendors | Client = `vyntec internal`, Department = `Chief of Staff` |
 | Task placement — Internal / vyntec ops | Client = `vyntec internal` |
-| Platform location (sub-account) for Precinct pipeline | `[location]` |
-| Platform pipeline + stage names | `[pipeline: stages]` |
+| Platform location (sub-account) for Precinct pipeline | `[location]` — Precinct only; not needed until Precinct prospect meetings are processed |
+| Platform pipeline + stage names | `[pipeline: stages]` — Precinct prospects only (used by the Step 8 stage check); not needed until then |
 | Drive root folder for meeting records | `VYNTEC Internal / Meetings` — https://drive.google.com/drive/folders/1t4e_Hz1I6kuyjlrwMK1fgvimJwR4_gGP (folder ID `1t4e_Hz1I6kuyjlrwMK1fgvimJwR4_gGP`, owner info@vyntec.co) |
 | Primary transcript source | Granola / Zoom |
 | Email signature block | `[signature]` |
