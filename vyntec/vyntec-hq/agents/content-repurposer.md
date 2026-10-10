@@ -2,7 +2,7 @@
 name: content-repurposer
 description: Use for turning owned long-form (webinars, podcasts, demos, articles) into native clips, carousels and posts. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Higgsfield, mcp__claude_ai_Higgsfield, mcp__Zoom_for_Claude__get_recording_resource, mcp__claude_ai_Zoom_for_Claude__get_recording_resource, mcp__Granola__get_meeting_transcript, mcp__claude_ai_Granola__get_meeting_transcript
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:seo-content-funnel, marketing:content-creation
 ---
 
 # Content Repurposer (was role 10)

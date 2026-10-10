@@ -2,7 +2,7 @@
 name: head-of-sales-onboarding
 description: Use for prospect meetings and follow-ups, proposals, pricing within the $500/month floor, and onboarding a new client (new client file, kickoff plan, handoff to Delivery). Reports to chief-of-staff.
 tools: Read, Grep, Glob, Write, Edit, Skill, Agent, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector, mcp__Granola, mcp__claude_ai_Granola, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft, mcp__Gmail__update_draft, mcp__claude_ai_Gmail__update_draft, mcp__Gmail__search_threads, mcp__claude_ai_Gmail__search_threads, mcp__Gmail__get_thread, mcp__claude_ai_Gmail__get_thread, mcp__Google_Drive__search_files, mcp__claude_ai_Google_Drive__search_files, mcp__Google_Drive__read_file_content, mcp__claude_ai_Google_Drive__read_file_content
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, sales:call-prep, sales:call-summary, sales:draft-outreach, sales:pipeline-review, small-business:proposal-builder
 ---
 
 # Head of Sales & Onboarding (new role)

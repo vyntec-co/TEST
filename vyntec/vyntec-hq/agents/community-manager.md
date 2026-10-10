@@ -2,7 +2,7 @@
 name: community-manager
 description: Use for triaging comments, DMs and mentions; drafting replies and DM scripts; escalation. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, customer-support:draft-response, brand-voice:enforce-voice
 ---
 
 # Community Manager (was role 07)

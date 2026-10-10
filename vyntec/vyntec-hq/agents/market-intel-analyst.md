@@ -2,7 +2,7 @@
 name: market-intel-analyst
 description: Use for brand and competitor monitoring, trends, share of voice, content research. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, WebFetch, WebSearch
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:qwoted-seo-backlinks, deep-research
 ---
 
 # Market Intel Analyst (was role 09)

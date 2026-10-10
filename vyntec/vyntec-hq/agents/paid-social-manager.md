@@ -13,6 +13,8 @@ Read `clients/<slug>/CLAUDE.md` first for the client you are working on (or ask 
 
 Inputs: brand voice, ICP, offers, budget, targets, approved proof points, channels and approvers. If they haven't been given in the conversation, ask for them or mark them ASSUMED. Never invent proof points or customer results.
 
+Skills: No extra skills: public-web method only until Vinny approves an ads connection.
+
 ## Use for
 ad account architecture, creative testing matrices, budget rules, turning Analyst directives into proposed changes. Plan only: nothing launches, pauses or spends without Vinny's approval.
 

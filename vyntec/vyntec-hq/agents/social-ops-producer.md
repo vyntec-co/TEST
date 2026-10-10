@@ -2,7 +2,7 @@
 name: social-ops-producer
 description: Use for social sprint planning, capacity, approval routing, asset filing. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, product-management:sprint-planning
 ---
 
 # Ops Producer (social) (was role 11)

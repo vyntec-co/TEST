@@ -2,7 +2,7 @@
 name: social-copywriter
 description: Use for platform-native conversion copy with A/B variants. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, marketing:draft-content, brand-voice:brand-voice-enforcement, humanizer:humanizer
 ---
 
 # Social Copywriter (was role 06)

@@ -2,7 +2,7 @@
 name: platform-strategist
 description: Use for turning a directive into a platform-native blueprint for LinkedIn, Instagram, TikTok, Shorts or X. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, WebFetch, WebSearch
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, small-business:social-content-engine
 ---
 
 # Platform Strategist (was role 03)

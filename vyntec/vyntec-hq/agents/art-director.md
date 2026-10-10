@@ -2,7 +2,7 @@
 name: art-director
 description: Use for visual concepts, Canva build specs, generative image prompts, safe-zone checks. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Canva, mcp__claude_ai_Canva, mcp__Higgsfield, mcp__claude_ai_Higgsfield
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, canva:brand-check, canva:resize-for-social-media, canva:edit-design
 ---
 
 # Art Director (was role 04)

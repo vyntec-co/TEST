@@ -2,7 +2,7 @@
 name: social-data-analyst
 description: Use for performance data, anomalies, creative fatigue, test readouts. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, marketing:performance-report, data:statistical-analysis
 ---
 
 # Social Data Analyst (was role 02)

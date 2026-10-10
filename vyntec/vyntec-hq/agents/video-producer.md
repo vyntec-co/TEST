@@ -2,7 +2,7 @@
 name: video-producer
 description: Use for short-form (Reels, TikTok, Shorts) scripts, retention mapping, edit directives. Reports to vp-of-social.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Higgsfield, mcp__claude_ai_Higgsfield, mcp__Zoom_for_Claude__get_recording_resource, mcp__claude_ai_Zoom_for_Claude__get_recording_resource, mcp__Granola__get_meeting_transcript, mcp__claude_ai_Granola__get_meeting_transcript
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, adobe-for-creativity:adobe-edit-quick-cut
 ---
 
 # Video Producer (was role 05)

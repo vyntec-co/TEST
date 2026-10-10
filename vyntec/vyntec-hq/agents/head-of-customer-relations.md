@@ -2,7 +2,7 @@
 name: head-of-customer-relations
 description: Use for client follow-ups after meetings, client check-ins, recap drafts, support tickets, and anything waiting on a client. Reports to chief-of-staff; client-liaison works under it.
 tools: Read, Grep, Glob, Write, Edit, Skill, Agent, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector, mcp__Granola, mcp__claude_ai_Granola, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft, mcp__Gmail__update_draft, mcp__claude_ai_Gmail__update_draft, mcp__Gmail__search_threads, mcp__claude_ai_Gmail__search_threads, mcp__Gmail__get_thread, mcp__claude_ai_Gmail__get_thread
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, sales:customer-health, sales:renewal-radar, customer-support:customer-escalation
 ---
 
 # Head of Customer Relations (new role)

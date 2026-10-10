@@ -2,7 +2,7 @@
 name: chief-of-staff
 description: Use first for anything that spans departments, for processing meetings (meeting SOP), for the daily brief, and for routing work to the right head. Sits above all department heads and reports to Vinny Mele.
 tools: Read, Grep, Glob, Write, Edit, Skill, Agent, mcp__Notion, mcp__claude_ai_Notion, mcp__Granola, mcp__claude_ai_Granola, mcp__Zoom_for_Claude__search_meetings, mcp__claude_ai_Zoom_for_Claude__search_meetings, mcp__Zoom_for_Claude__get_meeting_assets, mcp__claude_ai_Zoom_for_Claude__get_meeting_assets, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Google_Calendar__search_events, mcp__claude_ai_Google_Calendar__search_events, mcp__Google_Calendar__create_event, mcp__claude_ai_Google_Calendar__create_event, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft, mcp__Gmail__search_threads, mcp__claude_ai_Gmail__search_threads, mcp__Gmail__get_thread, mcp__claude_ai_Gmail__get_thread
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:prompt-master, productivity:task-management, anthropic-skills:internal-comms
 ---
 
 # Chief of Staff (new role)
