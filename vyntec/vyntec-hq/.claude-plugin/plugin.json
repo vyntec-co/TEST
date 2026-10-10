@@ -1,6 +1,6 @@
 {
   "name": "vyntec-hq",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "vyntec operations: department agents, shared rules and work-tracking skills, /client and /brief, and a mod with approval guards and a cockpit pane.",
   "author": { "name": "vyntec" },
   "types": "./types/index.d.ts"

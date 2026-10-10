@@ -85,7 +85,8 @@ test('cockpit lists the review queue and Approve sets the Notion status', async 
       : []) }],
   }))
   on('tool.call', { tool: 'mcp__Google_Calendar__list_events' }, () => ({ result: [{ type: 'text', text: '{"events":[]}' }] }))
-  on('tool.call', { tool: 'mcp__Notion__notion-update-page' }, ($, e) => { updates.push(e); return { result: [{ type: 'text', text: 'updated' }] } })
+  on('tool.list', () => ({ value: [] }))
+  on('mcp.call', ($, e) => { if (e.tool === 'notion-update-page') updates.push(e.args); return { value: { content: [{ type: 'text', text: 'updated' }], isError: false } } })
   on('ui.open', () => ({ value: { isPlaced: true } }))
   await $.command.run({ command: 'cockpit', args: '' })
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -158,7 +159,7 @@ const TASK_URL = 'https://app.notion.com/3f5369a7789a8115bcd5d58a2bc6a5be'
 const envelope = (pid: number, name: string, body: string) =>
   `<cross-session-message from="uds:/tmp/cc-socks/${pid}.sock" from-name="${name}" from-mode="prompting">\n${body}\n</cross-session-message>`
 
-function team(on, role: string | null, opts: { notionFails?: boolean } = {}) {
+function team(on, role: string | null, opts: { notionFails?: boolean; approved?: () => unknown[] } = {}) {
   const rec = { comments: [] as string[], updates: [] as unknown[], status: [] as string[], delivered: [] as string[] }
   const mem: Record<string, unknown> = {}
   on('env.get', ($, e, next) => (e.name === 'VYNTEC_TEAM_ROLE' ? { value: role ?? undefined } : next(e)))
@@ -175,6 +176,7 @@ function team(on, role: string | null, opts: { notionFails?: boolean } = {}) {
   on('model.complete', () => ({ value: { isAnswered: true, text: 'Revise B3 session credits.\nRun qa-lead.', usage: { input_tokens: 1, output_tokens: 1, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } }))
   on('mcp.call', ($, e) => {
     if (opts.notionFails) return { value: { content: [{ type: 'text', text: 'Notion is down' }], isError: true } }
+    if (e.tool === 'notion-query-data-sources' && opts.approved && JSON.stringify(e.args).includes('"Approved"')) return { value: { content: [{ type: 'text', text: JSON.stringify({ results: opts.approved() }) }], isError: false } }
     if (e.tool === 'notion-query-data-sources') return { value: { content: [{ type: 'text', text: JSON.stringify({ results: [{ url: TASK_URL }] }) }], isError: false } }
     if (e.tool === 'notion-create-comment') rec.comments.push(String(e.args.markdown))
     if (e.tool === 'notion-update-page') rec.updates.push(e.args.properties)
@@ -268,4 +270,31 @@ test('phase-1 guards still hold inside a department session', async ($, on) => {
   expect(refused(r)).toBe(true)
   const w = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'x' } } as never)
   expect(reason(w)).toMatch(/no client is active/)
+})
+
+test('an agent cannot set a task to Approved', async ($, on) => {
+  connectors(on, true)
+  const r = await $.tool.call({ tool: 'mcp__Notion__notion-update-page', page_id: 'abc', command: 'update_properties', properties: { Status: 'Approved' } } as never)
+  expect(reason(r)).toMatch(/only Vinny sets a task to Approved/)
+  const c = await $.tool.call({ tool: 'mcp__claude_ai_Notion__notion-create-pages', pages: [{ properties: { Name: 'x', Status: 'Approved' } }] } as never)
+  expect(refused(c)).toBe(true)
+})
+
+test('a newly Approved task wakes the chief with the department to assign it to', async ($, on) => {
+  let approved = [{ url: 'https://app.notion.com/old', Name: 'Old', 'Task ID': 3, Department: 'Ops', Client: '' }]
+  team(on, null, { approved: () => approved })
+  const prompts: string[] = []
+  on('prompt.submit', ($, e) => { prompts.push(String(e.text)); return { text: e.text } })
+  on('command.register', () => ({ value: undefined }))
+  on('session.start', ($, e) => ({ cwd: e.cwd }))
+  const start = { cwd: '/home/v/vyntec', surface: null, isInteractive: false, source: 'startup' } as never
+  await $.session.start(start)
+  expect(prompts).toEqual([]) // first check only records what is already Approved
+  approved = [...approved, { url: 'https://app.notion.com/new', Name: 'Fix B3 — CS Laser', 'Task ID': 12, Department: 'Delivery', Client: 'CS Laser' }]
+  await $.session.start(start)
+  expect(prompts.length).toBe(1)
+  expect(prompts[0]).toMatch(/VT-12 · Fix B3 — CS Laser · CS Laser → delivery/)
+  expect(prompts[0]).not.toMatch(/VT-3/)
+  await $.session.start(start)
+  expect(prompts.length).toBe(1) // never routed twice
 })

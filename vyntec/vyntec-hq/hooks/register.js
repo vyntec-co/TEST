@@ -15,6 +15,7 @@ export const TEAM = {
   },
   maxAssignsWithoutReport: 3, // a 4th assign on a task with no report in between is refused and the task goes Blocked
   maxHandoffsPerHour: 20,     // across the team (every hand-off passes the chief); then new assigns are held
+  approvalPollMinutes: 5,     // how often the chief checks vyntec Tasks for newly Approved tasks to route
 }
 
 // leadconnector operations by ID, from search_operations/describe_operation. Classes:
@@ -576,7 +577,6 @@ export const TASKS_DS = 'collection://7f6f9759-bbbf-45aa-ab9a-b2448918a625'
 // Connector tools are named by their server, which differs per machine (mcp__Notion__…, mcp__claude_ai_Notion__…):
 // find the connected tool by its suffix, falling back to this session's spelling.
 export const NOTION_QUERY = 'mcp__Notion__notion-query-data-sources'
-export const NOTION_UPDATE = 'mcp__Notion__notion-update-page'
 export const CALENDAR_LIST = 'mcp__Google_Calendar__list_events'
 async function resolveTool($, fallback) {
   const suffix = fallback.slice(fallback.lastIndexOf('__'))
@@ -636,6 +636,9 @@ export function judge(e, active = null) {
     const verb = tool.split('__').pop() ?? ''
     if (/gmail/i.test(tool) && /^(create|update)_draft$/.test(verb)) {
       return VENDOR.test(JSON.stringify(e)) ? { deny: 'vyntec white-label guard: this Gmail draft names the underlying vendor. Rewrite it before saving.' } : null
+    }
+    if (/notion/i.test(tool) && /^notion-(update-page|create-pages)$/.test(verb) && /"Status"\s*:\s*"Approved"/.test(JSON.stringify(e))) {
+      return { deny: 'vyntec approval guard: only Vinny sets a task to Approved (cockpit Approve button or Notion). Put it in Needs your review.' }
     }
     if (/calendar/i.test(tool) && /^(create|update)_event$/.test(verb) && Array.isArray(e.attendees) && e.attendees.length > 0) {
       return { deny: 'vyntec guard: an event with guests sends invites. Create it without attendees, or get Vinny\'s explicit yes.' }
@@ -721,11 +724,12 @@ export function parseEvents(text) {
   } catch { return [] }
 }
 
+// Vinny's cockpit press. It goes through $.mcp.call, so the approval guard (which judges agents' tool calls) never sees it.
 async function setStatus($, url, status) {
-  const page_id = /([0-9a-f]{32}|[0-9a-f-]{36})(?:[?#].*)?$/i.exec(url)?.[1] ?? url
-  const ran = await $.tool.call({ tool: await resolveTool($, NOTION_UPDATE), page_id, command: 'update_properties', properties: { Status: status }, allow_async: false })
-  if (ran.deny !== undefined || ran.isError) $.ui.toast(`Could not set ${status}: ${String(ran.deny ?? ran.text).slice(0, 120)}`)
-  else $.ui.toast(`Task set to ${status}.`)
+  try {
+    await notion($, 'notion-update-page', { page_id: pageId(url), command: 'update_properties', properties: { Status: status }, allow_async: false })
+    $.ui.toast(`Task set to ${status}.`)
+  } catch (err) { $.ui.toast(`Could not set ${status}: ${String(err?.message ?? err).slice(0, 120)}`) }
   await refresh($)
 }
 
@@ -968,6 +972,35 @@ async function withIdleNotice($, e) {
   return (await teamRole($)) === TEAM.chief ? { ...e, notify_when_idle: true } : e
 }
 
+// An Approved task wakes the chief, which assigns it to the department named on the task (its own ones it does itself).
+// The first check only records what is already Approved, so old approvals are not re-run.
+// shortcut: polls vyntec Tasks every approvalPollMinutes while the chief session is open, upgrade to a Notion webhook if approvals must start within seconds or with the chief closed
+export async function pollApproved($) {
+  if ((await teamRole($)) !== TEAM.chief) return
+  let rows
+  try {
+    const r = await notion($, 'notion-query-data-sources', { data: { mode: 'sql', data_source_urls: [TASKS_DS], query: `SELECT url, "Name", "Task ID", "Department", "Client" FROM "${TASKS_DS}" WHERE "Status" = ? ORDER BY createdTime LIMIT 50`, params: ['Approved'] } })
+    rows = JSON.parse(r.content.map(b => b.text ?? '').join('')).results ?? []
+  } catch (err) {
+    $.ui.status(`vyntec team: could not check vyntec Tasks for approvals (${String(err?.message ?? err).slice(0, 100)}).`)
+    return
+  }
+  const seen = await $.store.get('team.dispatched')
+  const ids = rows.map(r => `VT-${r['Task ID']}`)
+  await $.store.set('team.dispatched', [...new Set([...(seen ?? []), ...ids])].slice(-500))
+  if (seen === undefined) return // first check: only record
+  const fresh = rows.filter(r => !seen.includes(`VT-${r['Task ID']}`))
+  if (!fresh.length) return
+  const sessionFor = dep => Object.entries(TEAM.sessions).find(([, s]) => s.department === dep)?.[0] ?? TEAM.chief
+  const lines = fresh.map(r => `- VT-${r['Task ID']} · ${r.Name} · ${r.Client || 'no client'} → ${sessionFor(r.Department)} · ${r.url}`)
+  $.ui.status(`vyntec team: ${fresh.length} newly Approved task(s); routing.`)
+  void $.prompt.submit({ text: [
+    'Vinny approved these vyntec Tasks in Notion:', ...lines, '',
+    `For each one routed to a department, send that session a team message (TYPE assign) telling it to execute the approved action plan in the task. Do the ${TEAM.chief} ones yourself.`,
+    'Approval covers the T1 plan in the task only. T2 items (sending, publishing, spending, charging, deleting, live-build changes) still need Vinny\'s explicit yes.',
+  ].join('\n') }).catch(err => $.ui.status(`vyntec team: could not start the chief on new approvals (${String(err?.message ?? err).slice(0, 100)}).`))
+}
+
 function launchArgs(name, root) {
   const s = TEAM.sessions[name]
   const settings = {
@@ -1046,6 +1079,8 @@ export function teamText(rows, recent) {
   ].join('\n')
 }
 
+let approvalTimer = null
+
 export const register = on => {
   on('tool.call', async ($, e, next) => {
     if (e.tool === 'SendMessage') return next(await withIdleNotice($, e))
@@ -1091,6 +1126,8 @@ export const register = on => {
     await $.command.register({ name: 'team', description: 'vyntec team: status, or up (start missing sessions) / down (stop them)', argumentHint: '[up|down]' })
     const role = await teamRole($)
     if (role && role !== TEAM.chief) $.ui.status(`vyntec team · ${role}`)
+    try { if (!approvalTimer) approvalTimer = $.clock.every(TEAM.approvalPollMinutes * 60e3, () => { void pollApproved($) }) } catch {}
+    await pollApproved($)
     const active = await read($, client)
     if (active) $.ui.status(`vyntec · ${active.name}`)
     return next(e)
@@ -1122,7 +1159,10 @@ export const register = on => {
     if (arg === 'up' || arg === 'down') {
       const role = await teamRole($)
       if (role && role !== TEAM.chief) return { text: `/team ${arg} runs only in the ${TEAM.chief} session; this is ${role}.` }
-      return { text: arg === 'up' ? await teamUp($) : await teamDown($) }
+      if (arg === 'down') return { text: await teamDown($) }
+      const text = await teamUp($)
+      await pollApproved($)
+      return { text }
     }
     if (arg) return { text: 'Usage: /team, /team up, /team down' }
     // Panes may not draw (headless runs), so the transcript always gets the text table too.
