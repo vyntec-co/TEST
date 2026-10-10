@@ -1,5 +1,21 @@
-// vyntec-hq mod v1: approval guards, white-label guard, /client, cockpit pane, cheap-model routing.
+// vyntec-hq mod v2: approval guards, white-label guard, /client, cockpit pane, and the team (hub-and-spoke sessions).
 import { atom, read, update } from 'claude-code'
+
+// The team roster and its limits: the only place they are defined.
+// One named Claude Code session per row. Specialists stay subagents inside their head's session.
+// receivesFrom: the sessions whose messages this one accepts ('vinny' = typed by Vinny, never a peer message).
+export const TEAM = {
+  chief: 'chief-of-staff',
+  sessions: {
+    'chief-of-staff':     { agent: 'chief-of-staff',             model: 'opus',   department: 'Chief of Staff',      receivesFrom: ['vinny', 'delivery', 'social', 'sales', 'customer-relations'] },
+    delivery:             { agent: 'head-of-delivery',           model: 'sonnet', department: 'Delivery',            receivesFrom: ['chief-of-staff'] },
+    social:               { agent: 'vp-of-social',               model: 'sonnet', department: 'Social',              receivesFrom: ['chief-of-staff'] },
+    sales:                { agent: 'head-of-sales-onboarding',   model: 'sonnet', department: 'Sales & Onboarding',  receivesFrom: ['chief-of-staff'] },
+    'customer-relations': { agent: 'head-of-customer-relations', model: 'sonnet', department: 'Customer Relations',  receivesFrom: ['chief-of-staff'] },
+  },
+  maxAssignsWithoutReport: 3, // a 4th assign on a task with no report in between is refused and the task goes Blocked
+  maxHandoffsPerHour: 20,     // across the team (every hand-off passes the chief); then new assigns are held
+}
 
 // leadconnector operations by ID, from search_operations/describe_operation. Classes:
 //   read    → allowed (still refused when aimed at a location other than the active client's)
@@ -724,8 +740,306 @@ export function summary(c) {
   ].join('\n')
 }
 
+// --- g. The team: roster, hub-and-spoke guard, hand-off logging, limits, /team, Team tab ---
+
+const TEAM_PANE = 'vyntec-team'
+const teamDir = $ => `${$.plugin.root}/../.team`
+const NOTION_COMMENT = 'mcp__Notion__notion-create-comment'
+
+// shortcut: header parsing is plain text, upgrade to structured messages if the team grows past 5 sessions.
+const HEADER = /^TASK (VT-\d+) \| FROM (\S+) \| TO (\S+) \| TYPE (assign|report|blocked|question)\s*$/
+export function parseHeader(text) {
+  const m = HEADER.exec(String(text ?? '').split('\n')[0].trim())
+  return m && TEAM.sessions[m[2]] && TEAM.sessions[m[3]] ? { task: m[1], from: m[2], to: m[3], type: m[4] } : null
+}
+const headerLine = h => `TASK ${h.task} | FROM ${h.from} | TO ${h.to} | TYPE ${h.type}`
+
+// The engine wraps a peer message as <cross-session-message from="uds:/tmp/cc-socks/<pid>.sock" from-name="…">.
+// from-name is whatever the sender called itself, so it is ignored; the socket's pid is matched to a session ID.
+// shortcut: reads the sender pid from a Unix socket path, upgrade when sessions run on Windows (named pipes) or another machine
+export function parseEnvelope(text) {
+  const m = /<cross-session-message\b[^>]*\bfrom="uds:[^"]*?\/(\d+)\.sock"[^>]*>\n?([\s\S]*?)\n?<\/cross-session-message>/.exec(String(text ?? ''))
+  return m ? { pid: m[1], body: m[2] } : null
+}
+
+export async function readRoster($) {
+  try { return JSON.parse(await $.fs.read(`${teamDir($)}/roster.json`)) } catch { return null }
+}
+
+async function listSessions($) {
+  try {
+    const { exitCode, stdout } = await $.process.run(['claude', 'agents', '--json'], { timeoutMs: 20000 })
+    return exitCode === 0 ? JSON.parse(stdout) : []
+  } catch { return [] }
+}
+
+// This session's team role: set at launch for a department, recorded by /team up for the chief. null outside the team.
+async function teamRole($) {
+  let role
+  try { role = await $.env.get('VYNTEC_TEAM_ROLE') } catch {}
+  if (role && TEAM.sessions[role]) return role
+  const roster = await readRoster($)
+  return roster?.chief?.sessionId && roster.chief.sessionId === (await $.session.id()) ? TEAM.chief : null
+}
+
+// The roster role of the session behind a socket pid, by the session ID recorded at launch; null if none matches.
+async function roleOfPid($, pid, roster) {
+  const sid = (await listSessions($)).find(a => String(a.pid) === String(pid))?.sessionId
+  if (!sid || !roster) return null
+  if (roster.chief?.sessionId === sid) return TEAM.chief
+  return Object.entries(roster.sessions ?? {}).find(([, s]) => s.sessionId === sid)?.[0] ?? null
+}
+
+// Notion through $.mcp.call, retried once. Throws the last error.
+async function notion($, verb, args) {
+  const tool = await resolveTool($, `mcp__Notion__${verb}`)
+  const server = tool.slice('mcp__'.length, tool.lastIndexOf('__'))
+  let last = 'no answer'
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await $.mcp.call(server, verb, args)
+      if (!r.isError) return r
+      last = r.content?.map(b => b.text ?? '').join(' ') || 'error'
+    } catch (err) { last = String(err?.message ?? err) }
+  }
+  throw new Error(last.slice(0, 160))
+}
+
+async function taskPage($, task) {
+  const r = await notion($, 'notion-query-data-sources', {
+    data: { mode: 'sql', data_source_urls: [TASKS_DS], query: `SELECT url FROM "${TASKS_DS}" WHERE "Task ID" = ? LIMIT 1`, params: [Number(task.slice(3))] },
+  })
+  const url = parseTaskRows(r.content.map(b => b.text ?? '').join('\n'))[0]?.url
+  if (!url) throw new Error(`no vyntec Tasks entry ${task}`)
+  return url
+}
+const pageId = url => /([0-9a-f]{32}|[0-9a-f-]{36})(?:[?#].*)?$/i.exec(url)?.[1] ?? url
+
+async function summarize($, body) {
+  try {
+    const r = await $.model.complete({ model: 'haiku', maxTokens: 200, system: 'Summarize this hand-off message between agents in at most 3 short plain-text lines. No preamble.', prompt: body.slice(0, 8000) })
+    if (r.isAnswered && r.text.trim()) return r.text.trim().split('\n').filter(Boolean).slice(0, 3).join('\n')
+  } catch {}
+  return body.split('\n').slice(1).filter(Boolean).slice(0, 3).join('\n').slice(0, 300)
+}
+
+// One Notion comment per message (header, summary, time) plus the status change its type calls for.
+// Never throws: a failed write shows a status line and the message stays delivered.
+export async function logHandoff($, h, body, note = '') {
+  const time = new Date(await $.clock.now()).toISOString().slice(0, 16).replace('T', ' ') + 'Z'
+  let url = null
+  try {
+    url = await taskPage($, h.task)
+    const summary = await summarize($, body)
+    await notion($, 'notion-create-comment', { page_id: pageId(url), markdown: [headerLine(h), summary, note, time].filter(Boolean).join('\n') })
+    const props = h.type === 'assign' ? { 'Executing agent': TEAM.sessions[h.to].agent, Department: TEAM.sessions[h.to].department }
+      : h.type === 'report' ? { Status: 'Needs your review' }
+      : h.type === 'blocked' ? { Status: 'Blocked' } : null
+    if (props) await notion($, 'notion-update-page', { page_id: pageId(url), command: 'update_properties', properties: props, allow_async: false })
+  } catch (err) {
+    $.ui.status(`vyntec team: Notion log failed for ${h.task} ${h.type} (${String(err?.message ?? err).slice(0, 100)}). The message was delivered.`)
+  }
+  const recent = (await $.store.get('team.recent')) ?? []
+  await $.store.set('team.recent', [{ time, line: headerLine(h), note, url }, ...recent].slice(0, 10))
+}
+
+async function writeStatus($, role, patch) {
+  try {
+    const path = `${teamDir($)}/status/${role}.json`
+    let prev = {}
+    try { prev = JSON.parse(await $.fs.read(path)) } catch {}
+    await $.fs.write(path, JSON.stringify({ ...prev, ...patch, role }))
+  } catch {}
+}
+
+// A delivered hand-off: counters at the chief, the session's status file, and the Notion log (the chief logs every
+// hand-off once, since all of them pass through it).
+async function noteHandoff($, me, h, body, note = '') {
+  const now = await $.clock.now()
+  await writeStatus($, me, { task: h.task, lastMessageAt: now })
+  if (me !== TEAM.chief) return
+  const hour = ((await $.store.get('team.handoffs')) ?? []).filter(t => now - t < 3600e3)
+  await $.store.set('team.handoffs', [...hour, now])
+  const assigns = (await $.store.get('team.assigns')) ?? {}
+  const pending = (await $.store.get('team.pending')) ?? {}
+  if (h.type === 'assign') { assigns[h.task] = (assigns[h.task] ?? 0) + 1; pending[h.task] = h.to }
+  if (h.type === 'report' || h.type === 'blocked') { delete assigns[h.task]; delete pending[h.task] }
+  await $.store.set('team.assigns', assigns)
+  await $.store.set('team.pending', pending)
+  await logHandoff($, h, body, h.type === 'blocked' ? `NEEDS HUMAN: ${h.from} is blocked; Vinny decides.${note ? ` ${note}` : ''}` : note)
+}
+
+// The chief asked for one idle notice with each assign; a department that goes idle with an assign still unreported
+// leaves the task Blocked and a NEEDS HUMAN line in the cockpit.
+async function onIdleNotice($, text) {
+  const pending = (await $.store.get('team.pending')) ?? {}
+  const roster = await readRoster($)
+  const idle = Object.keys(TEAM.sessions).filter(s => s !== TEAM.chief &&
+    (new RegExp(`\\b${s}\\b`).test(text) || (roster?.sessions?.[s]?.id && text.includes(roster.sessions[s].id))))
+  for (const [task, to] of Object.entries(pending)) {
+    if (!idle.includes(to)) continue
+    delete pending[task]
+    const h = { task, from: to, to: TEAM.chief, type: 'blocked' }
+    await logHandoff($, h, `${headerLine(h)}\n${to} went idle without a report.`, `NEEDS HUMAN: ${to} went idle without reporting on ${task}. Vinny decides whether to reassign.`)
+    await update($, cockpit, c => ({ ...c, blocked: [...c.blocked, { url: '', name: `${task}: ${to} went idle without a report`, client: '', agent: TEAM.sessions[to].agent }] }))
+    $.ui.status(`vyntec team: ${task} Blocked, ${to} went idle without a report.`)
+  }
+  await $.store.set('team.pending', pending)
+}
+
+// Every send from a team session: header, sender, recipient and limits checked before anything leaves.
+export async function guardSend($, e, next) {
+  const me = await teamRole($)
+  if (!me || e.to === 'main') return next(e)
+  const refuse = why => { $.ui.status(`vyntec team: ${why}`); return { isDelivered: false, reason: `vyntec team guard: ${why}` } }
+  const h = parseHeader(e.text)
+  if (!h) return refuse('message refused: its first line must be "TASK VT-<n> | FROM <session> | TO <session> | TYPE assign|report|blocked|question" with the vyntec Tasks ID it belongs to.')
+  if (h.from !== me) return refuse(`message refused: FROM must be this session (${me}), not ${h.from}.`)
+  if (!TEAM.sessions[h.to].receivesFrom.includes(me)) return refuse(`message refused: ${me} may not message ${h.to}; departments talk only to ${TEAM.chief}.`)
+  const roster = await readRoster($)
+  const target = String(e.to).split(' [')[0]
+  const pid = /\/(\d+)\.sock$/.exec(target)?.[1]
+  const ok = target === h.to || [roster?.sessions?.[h.to]?.id, roster?.sessions?.[h.to]?.sessionId, h.to === TEAM.chief ? roster?.chief?.sessionId : undefined].includes(target) ||
+    (pid !== undefined && (await roleOfPid($, pid, roster)) === h.to)
+  if (!ok) return refuse(`message refused: the header says TO ${h.to} but it is addressed to ${e.to}.`)
+  if (me === TEAM.chief && h.type === 'assign') {
+    const now = await $.clock.now()
+    const hour = ((await $.store.get('team.handoffs')) ?? []).filter(t => now - t < 3600e3)
+    if (hour.length >= TEAM.maxHandoffsPerHour) {
+      const at = new Date(Math.min(...hour) + 3600e3).toISOString().slice(11, 16)
+      return refuse(`assign held: ${hour.length} hand-offs in the last hour (limit ${TEAM.maxHandoffsPerHour}). New assigns resume at ${at}Z.`)
+    }
+    const assigns = ((await $.store.get('team.assigns')) ?? {})[h.task] ?? 0
+    if (assigns >= TEAM.maxAssignsWithoutReport) {
+      await logHandoff($, { ...h, type: 'blocked' }, e.text, `NEEDS HUMAN: ${assigns} assigns to ${h.task} without a report; a further assign was refused.`)
+      return refuse(`assign refused: ${h.task} already had ${assigns} assigns without a report. The task is now Blocked for Vinny.`)
+    }
+  }
+  const r = await next(e)
+  if (r.isDelivered) await noteHandoff($, me, h, e.text)
+  return r
+}
+
+// Every peer message into a team session: the sender is identified by the session ID recorded at launch.
+export async function guardReceive($, e, next) {
+  const me = await teamRole($)
+  if (!me) return next(e)
+  if (/\[Cross-session idle notice\]/.test(e.text) && !parseEnvelope(e.text)) {
+    if (me === TEAM.chief) await onIdleNotice($, e.text)
+    return next(e)
+  }
+  const env = parseEnvelope(e.text)
+  if (!env) return next(e)
+  const h = parseHeader(env.body)
+  const roster = await readRoster($)
+  const sender = await roleOfPid($, env.pid, roster)
+  const allowed = TEAM.sessions[me].receivesFrom
+  const why = !sender ? `the sender (pid ${env.pid}) is not a team session recorded at launch`
+    : !allowed.includes(sender) ? `${me} takes messages only from ${allowed.filter(s => s !== 'vinny').join(', ')}; this came from ${sender}`
+    : !h ? 'it has no valid "TASK VT-<n> | FROM | TO | TYPE" header'
+    : h.from !== sender ? `the header says FROM ${h.from} but it came from the ${sender} session`
+    : h.to !== me ? `the header says TO ${h.to} but this is ${me}`
+    : null
+  if (why) {
+    $.ui.status(`vyntec team: consumed a message: ${why}.`)
+    if (h) await logHandoff($, h, env.body, `CONSUMED at ${me}: ${why}.`)
+    else {
+      const recent = (await $.store.get('team.recent')) ?? []
+      await $.store.set('team.recent', [{ time: new Date(await $.clock.now()).toISOString().slice(11, 16) + 'Z', line: `(no header) to ${me}`, note: `CONSUMED: ${why}.`, url: null }, ...recent].slice(0, 10))
+    }
+    return { consumed: `vyntec team guard: ${why}.` }
+  }
+  const r = await next(e)
+  await noteHandoff($, me, h, env.body)
+  return r
+}
+
+// After each assign the chief asks for one idle notice from that department.
+async function withIdleNotice($, e) {
+  if (e.notify_when_idle || !/^TASK VT-\d+ \| FROM \S+ \| TO \S+ \| TYPE assign/.test(String(e.message ?? ''))) return e
+  return (await teamRole($)) === TEAM.chief ? { ...e, notify_when_idle: true } : e
+}
+
+function launchArgs(name, root) {
+  const s = TEAM.sessions[name]
+  const settings = {
+    crossSessionInbound: 'accept',
+    env: { VYNTEC_TEAM_ROLE: name },
+    worktree: { bgIsolation: 'none' },
+    permissions: { defaultMode: 'acceptEdits', allow: ['SendMessage', 'ListAgents', 'Skill', 'Agent', 'Read', 'Glob', 'Grep', 'mcp__Notion', 'mcp__claude_ai_Notion', 'mcp__leadconnector', 'mcp__claude_ai_leadconnector'] },
+  }
+  const prompt = `You are the ${name} session of the vyntec team (agent ${s.agent}). Work arrives only from ${TEAM.chief} by message. Reply with one word, ready, then wait.`
+  return ['claude', '--bg', '--name', name, '--agent', `vyntec-hq:${s.agent}`, '--model', s.model, '--settings', JSON.stringify(settings), prompt]
+}
+
+const isLive = a => a && a.kind === 'background' && !['done', 'stopped', 'failed', 'exited'].includes(String(a.state ?? ''))
+
+async function teamUp($) {
+  const root = `${$.plugin.root}/..`
+  const roster = (await readRoster($)) ?? { sessions: {} }
+  roster.chief = { sessionId: await $.session.id() }
+  const running = await listSessions($)
+  const lines = []
+  for (const name of Object.keys(TEAM.sessions)) {
+    if (name === TEAM.chief) continue
+    const live = running.find(a => a.name === name && isLive(a))
+    if (live) { roster.sessions[name] = { id: live.id, sessionId: live.sessionId }; lines.push(`${name}: already running (${live.id})`); continue }
+    const r = await $.process.run(launchArgs(name, root), { cwd: root, timeoutMs: 120000 })
+    const id = /backgrounded\s*·\s*([0-9a-f]+)/.exec(r.stdout + r.stderr)?.[1]
+    if (r.exitCode !== 0 || !id) { lines.push(`${name}: launch failed (${(r.stderr || r.stdout).trim().slice(0, 160)})`); continue }
+    roster.sessions[name] = { id }
+    lines.push(`${name}: started (${id}, ${TEAM.sessions[name].model})`)
+  }
+  for (const a of await listSessions($)) {
+    const entry = Object.values(roster.sessions).find(s => s.id && s.id === a.id)
+    if (entry) entry.sessionId = a.sessionId
+  }
+  await $.fs.write(`${teamDir($)}/roster.json`, JSON.stringify(roster, null, 2))
+  return `vyntec team up (claude --bg, cwd ${root}):\n${lines.join('\n')}\nchief-of-staff: this session (${roster.chief.sessionId.slice(0, 8)})`
+}
+
+async function teamDown($) {
+  const roster = await readRoster($)
+  const lines = []
+  for (const [name, s] of Object.entries(roster?.sessions ?? {})) {
+    if (!s.id) continue
+    const r = await $.process.run(['claude', 'stop', s.id], { timeoutMs: 60000 })
+    lines.push(`${name}: ${r.exitCode === 0 ? 'stopped' : `stop failed (${(r.stderr || r.stdout).trim().slice(0, 120)})`} (${s.id})`)
+  }
+  return `vyntec team down:\n${lines.join('\n') || '(no team sessions recorded)'}`
+}
+
+export async function teamRows($) {
+  const roster = await readRoster($)
+  const running = await listSessions($)
+  const rows = []
+  for (const [name, s] of Object.entries(TEAM.sessions)) {
+    const sid = name === TEAM.chief ? roster?.chief?.sessionId : roster?.sessions?.[name]?.sessionId
+    const live = running.find(a => sid && a.sessionId === sid)
+    let st = {}
+    try { st = JSON.parse(await $.fs.read(`${teamDir($)}/status/${name}.json`)) } catch {}
+    const status = !live || (name !== TEAM.chief && !isLive(live)) ? 'offline' : live.status === 'busy' ? 'working' : 'idle'
+    const last = st.lastMessageAt ? new Date(st.lastMessageAt).toISOString().slice(11, 16) + 'Z' : '-'
+    const usage = st.usd !== undefined ? `$${Number(st.usd).toFixed(2)}${st.contextPercent !== undefined ? ` · ${st.contextPercent}% ctx` : ''}` : '-'
+    rows.push({ name, model: s.model, status, task: st.task ?? '-', last, usage })
+  }
+  return rows
+}
+
+export function teamText(rows, recent) {
+  const pad = (v, n) => String(v).padEnd(n)
+  return [
+    'vyntec team:',
+    `  ${pad('session', 19)}${pad('model', 7)}${pad('status', 8)}${pad('task', 7)}${pad('last msg', 9)}usage since start`,
+    ...rows.map(r => `  ${pad(r.name, 19)}${pad(r.model, 7)}${pad(r.status, 8)}${pad(r.task, 7)}${pad(r.last, 9)}${r.usage}`),
+    `Recent hand-offs (${recent.length}):`,
+    ...recent.map(x => `  ${x.time} ${x.line}${x.note ? ` · ${x.note}` : ''}${x.url ? ` · ${x.url}` : ''}`),
+  ].join('\n')
+}
+
 export const register = on => {
   on('tool.call', async ($, e, next) => {
+    if (e.tool === 'SendMessage') return next(await withIdleNotice($, e))
     const active = isGhl(String(e.tool)) ? await read($, client) : null
     const verdict = judge(e, active)
     if (verdict === null) return next(e)
@@ -741,15 +1055,33 @@ export const register = on => {
     return next.called ? next(e) : { deny: 'vyntec guard failed, so the call is refused.' }
   })
 
-  // f. Triage and logging go to a cheaper model; everything else keeps the default.
-  on('agent.spawn', ($, e, next) =>
-    e.model === undefined && /\b(triage|triaging|log|logging)\b/i.test(`${e.description} ${e.subagentType}`)
-      ? next({ ...e, model: 'haiku' })
-      : next(e))
+  // g. The team. Haiku is used only through $.model.complete, for the hand-off summaries.
+  on('session.send', guardSend).catch(($, e, next) =>
+    next.called ? next(e) : { isDelivered: false, reason: `vyntec team guard failed (${String(next.error?.message ?? next.error).slice(0, 120)}), so the message was not sent.` })
+  on('session.receive', guardReceive).catch(($, e, next) =>
+    next.called ? next(e) : { consumed: `vyntec team guard failed (${String(next.error?.message ?? next.error).slice(0, 120)}), so the message was held back.` })
+  on('turn.start', async ($, e, next) => {
+    const role = await teamRole($)
+    if (role) await writeStatus($, role, { state: 'working', at: await $.clock.now() })
+    return next(e)
+  })
+  on('turn.complete', async ($, e, next) => {
+    const r = await next(e)
+    const role = await teamRole($)
+    if (role) {
+      let usage = {}
+      try { const u = await $.session.usage(); usage = { usd: u.cost?.usd, contextPercent: u.context?.percent, startedAt: u.startedAt } } catch {}
+      await writeStatus($, role, { state: 'idle', at: await $.clock.now(), ...usage })
+    }
+    return r
+  })
 
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'client', description: 'Set the active vyntec client and load its CLAUDE.md', argumentHint: '<slug>' })
     await $.command.register({ name: 'cockpit', description: 'Open the vyntec cockpit: review queue, today, NEEDS HUMAN' })
+    await $.command.register({ name: 'team', description: 'vyntec team: status, or up (start missing sessions) / down (stop them)', argumentHint: '[up|down]' })
+    const role = await teamRole($)
+    if (role && role !== TEAM.chief) $.ui.status(`vyntec team · ${role}`)
     const active = await read($, client)
     if (active) $.ui.status(`vyntec · ${active.name}`)
     return next(e)
@@ -776,6 +1108,37 @@ export const register = on => {
     return { text: summary(await read($, cockpit)) }
   })
 
+  on('command.run', { command: 'team' }, async ($, e) => {
+    const arg = e.args.trim()
+    if (arg === 'up' || arg === 'down') {
+      const role = await teamRole($)
+      if (role && role !== TEAM.chief) return { text: `/team ${arg} runs only in the ${TEAM.chief} session; this is ${role}.` }
+      return { text: arg === 'up' ? await teamUp($) : await teamDown($) }
+    }
+    if (arg) return { text: 'Usage: /team, /team up, /team down' }
+    // Panes may not draw (headless runs), so the transcript always gets the text table too.
+    await $.ui.open({ id: TEAM_PANE, title: 'vyntec cockpit · Team' })
+    return { text: teamText(await teamRows($), (await $.store.get('team.recent')) ?? []) }
+  })
+
+  on('ui.render', { component: 'Pane', requestId: TEAM_PANE }, async ($, e) => {
+    const { Box, Text, Button, Link } = $.ui.resolve(e)
+    const rows = await teamRows($)
+    const recent = (await $.store.get('team.recent')) ?? []
+    const color = { working: 'yellow', idle: 'green', offline: 'gray' }
+    return h(Box, { flexDirection: 'column' },
+      h(Text, { bold: true }, 'Team'),
+      ...rows.map(r => h(Box, { key: r.name, flexDirection: 'row', gap: 1 },
+        h(Text, null, r.name.padEnd(19)), h(Text, { dimColor: true }, r.model.padEnd(7)),
+        h(Text, { color: color[r.status] }, r.status.padEnd(8)), h(Text, null, r.task.padEnd(7)),
+        h(Text, { dimColor: true }, r.last.padEnd(7)), h(Text, null, r.usage))),
+      h(Text, { bold: true }, `Recent hand-offs (${recent.length})`),
+      ...recent.map((x, i) => x.url
+        ? h(Link, { key: `r${i}`, href: x.url, label: `${x.time} ${x.line}${x.note ? ` · ${x.note}` : ''}` })
+        : h(Text, { key: `r${i}` }, `${x.time} ${x.line}${x.note ? ` · ${x.note}` : ''}`)),
+      h(Button, { key: 'refresh', label: 'Refresh', onPress: () => $.ui.invalidate('ui.render') }))
+  })
+
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const c = await read($, cockpit)
@@ -791,7 +1154,9 @@ export const register = on => {
       ...c.events.map(ev => h(Text, { key: `ev:${ev.time}${ev.title}` }, `${ev.time}  ${ev.title}`)),
       h(Text, { bold: true }, `NEEDS HUMAN (${c.blocked.length})`),
       ...c.blocked.map(t => row(t, false)),
-      h(Button, { key: 'refresh', label: 'Refresh', onPress: () => refresh($) }),
+      h(Box, { flexDirection: 'row', gap: 1 },
+        h(Button, { key: 'refresh', label: 'Refresh', onPress: () => refresh($) }),
+        h(Button, { key: 'team', label: 'Team', onPress: () => $.ui.open({ id: TEAM_PANE, title: 'vyntec cockpit · Team' }) })),
       c.loadedAt ? h(Text, { dimColor: true }, `loaded ${c.loadedAt}`) : null)
   })
 }

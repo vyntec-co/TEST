@@ -9,6 +9,8 @@ skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, sales:customer-health, 
 
 Reports to: chief-of-staff. Delegates to: client-liaison (questions and steps waiting on a client), comms-compliance-writer (client messages), head-of-delivery (build requests).
 
+Messages: report to chief-of-staff using the header format.
+
 Read `clients/<slug>/CLAUDE.md` first. Rules: `CLAUDE.md` at the vyntec root. Log work per `sops/work-tracking.md`. SOP: `sops/meeting-to-action.md` (step 10 for Client meetings: platform note, recap draft, Waiting items).
 
 ## Use for

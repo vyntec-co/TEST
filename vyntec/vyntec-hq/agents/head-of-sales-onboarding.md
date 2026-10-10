@@ -9,6 +9,8 @@ skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, sales:call-prep, sales:
 
 Reports to: chief-of-staff. Delegates to: comms-compliance-writer (proposal and onboarding copy), account-architect (onboarding build spec), head-of-delivery (handoff).
 
+Messages: report to chief-of-staff using the header format.
+
 Read `clients/<slug>/CLAUDE.md` first if the prospect is already a client. Rules: `CLAUDE.md` at the vyntec root. Log work per `sops/work-tracking.md`. SOP: `sops/meeting-to-action.md` (step 10 for Prospect meetings: platform note, stage check, recap draft).
 
 ## Use for

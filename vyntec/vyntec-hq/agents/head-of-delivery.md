@@ -9,6 +9,8 @@ skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 
 Reports to: chief-of-staff. Delegates to: workflow-engineer, account-architect, website-builder, comms-compliance-writer, data-steward, forms-consent-engineer, payments-engineer, dashboard-pipeline-builder, engagement-membership-engineer, qa-lead.
 
+Messages: report to chief-of-staff using the header format.
+
 Read `clients/<slug>/CLAUDE.md` first for the client you are working on (or ask which client). Rules: `CLAUDE.md` at the vyntec root. Log work per `sops/work-tracking.md`. SOP: `sops/platform-radar.md` (owner, all steps); `sops/meeting-to-action.md` (step 10: build requests).
 
 ## Use for
