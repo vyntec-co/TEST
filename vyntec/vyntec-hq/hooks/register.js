@@ -6,11 +6,554 @@ import { atom, read, update } from 'claude-code'
 //   write   → allowed only for the active client's location and only while it has an Approved task
 //   blocked → always refused (sends messages; payments, invoices, subscriptions, phone system, billing)
 // An ID missing from this table is refused, naming the ID.
+// Built from search_operations/describe_operation on 2026-10-10, 546 operations. Classes: read | write | blocked.
 export const GHL_OPS = {
+  'GET-all-or-email-sms-templates': 'read',
+  'active-numbers': 'read',
+  'check-url-slug-exists': 'read',
+  'download-message-transcription': 'read',
+  'export-messages-by-location': 'read',
+  'fb-get-ad-account': 'read',
+  'fb-get-ad-accounts': 'read',
+  'fb-get-campaign': 'read',
+  'fb-get-campaign-publishing-progress': 'read',
+  'fb-get-campaign-reporting': 'read',
+  'fb-get-conversation-forms': 'read',
+  'fb-get-current-user': 'read',
+  'fb-get-custom-audience-by-id': 'read',
+  'fb-get-custom-audiences': 'read',
+  'fb-get-entity': 'read',
+  'fb-get-instagram-accounts': 'read',
+  'fb-get-integration': 'read',
+  'fb-get-lead-form': 'read',
+  'fb-get-page-lead-forms': 'read',
+  'fb-get-pages': 'read',
+  'fb-get-pixels': 'read',
+  'fb-get-reporting': 'read',
+  'fb-get-reporting-list': 'read',
+  'fb-search-targeting': 'read',
+  'fetch-calendar-resources': 'read',
+  'fetch-config': 'read',
+  'fetch-media-content': 'read',
+  'fetch-redirects-list': 'read',
+  'fetchAvailableCategories': 'read',
+  'fetchQueueById': 'read',
+  'find-associations': 'read',
+  'find-event-notification': 'read',
+  'generate-estimate-number': 'read',
+  'generate-invoice-number': 'read',
+  'get-account': 'read',
+  'get-action': 'read',
+  'get-affiliate': 'read',
+  'get-agents': 'read',
+  'get-all-blog-authors-by-location': 'read',
+  'get-all-categories-by-location': 'read',
+  'get-all-notes': 'read',
+  'get-all-tasks': 'read',
+  'get-appointment': 'read',
+  'get-appointment-notes': 'read',
+  'get-appointments-for-contact': 'read',
+  'get-association-by-ID': 'read',
+  'get-association-by-object-keys': 'read',
+  'get-association-key-by-key-name': 'read',
+  'get-blocked-slots': 'read',
+  'get-blog-post': 'read',
+  'get-blogs': 'read',
+  'get-brand-voice': 'read',
+  'get-bulk-action-campaign': 'read',
+  'get-business': 'read',
+  'get-businesses-by-location': 'read',
+  'get-calendar': 'read',
+  'get-calendar-events': 'read',
+  'get-calendar-resource': 'read',
+  'get-calendars': 'read',
+  'get-call-logs': 'read',
+  'get-campaign-stats': 'read',
+  'get-campaigns': 'read',
+  'get-categories-id': 'read',
+  'get-categories-location-id': 'read',
   'get-contact': 'read',
+  'get-contacts-by-businessId': 'read',
+  'get-conversation': 'read',
+  'get-conversation-channel': 'read',
+  'get-coupon': 'read',
+  'get-csv-post': 'read',
+  'get-custom-field': 'read',
+  'get-custom-field-by-id': 'read',
+  'get-custom-fields': 'read',
+  'get-custom-fields-by-object-key': 'read',
+  'get-custom-value': 'read',
+  'get-custom-values': 'read',
+  'get-design-kit': 'read',
+  'get-duplicate-contact': 'read',
+  'get-email-by-id': 'read',
+  'get-email-campaign': 'read',
+  'get-email-template': 'read',
+  'get-event-notification': 'read',
+  'get-forms': 'read',
+  'get-forms-submissions': 'read',
+  'get-groups': 'read',
+  'get-invoice': 'read',
+  'get-invoice-schedule': 'read',
+  'get-invoice-settings': 'read',
+  'get-invoice-template': 'read',
+  'get-link-by-id': 'read',
+  'get-links': 'read',
+  'get-list-inventory': 'read',
+  'get-location': 'read',
+  'get-location-tags': 'read',
+  'get-lost-reason': 'read',
+  'get-message': 'read',
+  'get-message-recording': 'read',
+  'get-message-transcription': 'read',
+  'get-messages': 'read',
+  'get-note': 'read',
+  'get-oauth-accounts': 'read',
+  'get-object-by-location-id': 'read',
+  'get-object-schema-by-key': 'read',
+  'get-opportunity': 'read',
+  'get-order-by-id': 'read',
+  'get-pipelines': 'read',
+  'get-post': 'read',
+  'get-price-by-id-for-product': 'read',
+  'get-product-by-id': 'read',
+  'get-product-collection': 'read',
+  'get-product-collection-id': 'read',
+  'get-product-reviews': 'read',
+  'get-product-store-stats': 'read',
+  'get-record-by-id': 'read',
+  'get-recurring-task-by-id': 'read',
+  'get-relations-by-record-id': 'read',
+  'get-reviews-count': 'read',
+  'get-service-booking-by-id': 'read',
+  'get-service-bookings': 'read',
+  'get-service-catalog-by-id': 'read',
+  'get-service-location-by-id': 'read',
+  'get-service-locations': 'read',
+  'get-services-catalog': 'read',
+  'get-shipping-carriers': 'read',
+  'get-shipping-rates': 'read',
+  'get-shipping-zones': 'read',
+  'get-slots': 'read',
+  'get-store-settings': 'read',
+  'get-subscription-by-id': 'read',
+  'get-surveys': 'read',
+  'get-surveys-submissions': 'read',
+  'get-tag-by-id': 'read',
+  'get-tags-location-id': 'read',
+  'get-task': 'read',
+  'get-timezones': 'read',
+  'get-transaction-by-id': 'read',
+  'get-upload-status': 'read',
+  'get-user': 'read',
+  'get-workflow': 'read',
+  'get-workflow-campaign': 'read',
+  'getAllSchedules': 'read',
+  'getAllWebsiteUrlsDataByKnowledgeBase': 'read',
+  'getCalendarSchedule': 'read',
+  'getCallLog': 'read',
+  'getCharges': 'read',
+  'getChatWidget': 'read',
+  'getCrawlingStatusForLatestOperation': 'read',
+  'getFileById': 'read',
+  'getFilesByKnowledgeBasePublic': 'read',
+  'getFunnels': 'read',
+  'getKnowledgeBaseById': 'read',
+  'getNumberPoolList': 'read',
+  'getPagesByFunnelId': 'read',
+  'getPagesCountByFunnelId': 'read',
+  'getScheduleById': 'read',
+  'getSpecificCharge': 'read',
+  'google-get-ad-account-details': 'read',
+  'google-get-ad-accounts': 'read',
+  'google-get-assets': 'read',
+  'google-get-audience-by-id': 'read',
+  'google-get-audiences': 'read',
+  'google-get-campaign-by-id': 'read',
+  'google-get-campaign-reporting': 'read',
+  'google-get-conversion-by-id': 'read',
+  'google-get-conversion-goals': 'read',
+  'google-get-conversions': 'read',
+  'google-get-current-user': 'read',
+  'google-get-entity': 'read',
+  'google-get-integration': 'read',
+  'google-get-reporting': 'read',
+  'google-get-reporting-list': 'read',
+  'google-get-segment-by-id': 'read',
+  'google-get-segments': 'read',
+  'google-get-target-interests': 'read',
+  'google-search-targeting': 'read',
+  'hasFunds': 'read',
+  'invoices.list-invoices': 'read',
+  'li-get-ad-account-details': 'read',
+  'li-get-ad-accounts': 'read',
+  'li-get-ad-analytics': 'read',
+  'li-get-campaign-group': 'read',
+  'li-get-campaign-group-reporting': 'read',
+  'li-get-current-user': 'read',
+  'li-get-integration': 'read',
+  'li-get-lead-forms': 'read',
+  'li-get-reporting-list': 'read',
+  'li-search-targeting': 'read',
+  'list': 'read',
+  'list-affiliates': 'read',
+  'list-brand-voices': 'read',
+  'list-bulk-action-campaigns': 'read',
+  'list-commissions': 'read',
+  'list-coupons': 'read',
+  'list-design-kits': 'read',
+  'list-documents-contracts': 'read',
+  'list-documents-contracts-templates': 'read',
+  'list-email-campaigns': 'read',
+  'list-email-templates': 'read',
+  'list-estimate-templates': 'read',
+  'list-estimates': 'read',
+  'list-integration-providers': 'read',
+  'list-invoice-schedules': 'read',
+  'list-invoice-templates': 'read',
+  'list-order-fulfillment': 'read',
+  'list-order-notes': 'read',
+  'list-orders': 'read',
+  'list-payouts': 'read',
+  'list-prices-for-product': 'read',
+  'list-shipping-carriers': 'read',
+  'list-shipping-rates': 'read',
+  'list-shipping-zones': 'read',
+  'list-subscriptions': 'read',
+  'list-transactions': 'read',
+  'list-workflow-campaigns': 'read',
+  'listAllKnowledgeBasesPaginated': 'read',
+  'listAvailableNumbersForACountry': 'read',
+  'listChatWidget': 'read',
+  'lookup-contact': 'read',
+  'preview-estimate-template': 'read',
+  'products.list-invoices': 'read',
+  'search-contacts-advanced': 'read',
+  'search-conversation': 'read',
+  'search-locations': 'read',
+  'search-object-records': 'read',
+  'search-opportunities-advanced': 'read',
+  'search-opportunity': 'read',
+  'search-trigger-links': 'read',
+  'search-users': 'read',
+  'task-search': 'read',
+  'voice-ai.get-agent': 'read',
+  'Upsert-opportunity': 'write',
+  'add-calendar-to-schedule': 'write',
+  'add-followers-contact': 'write',
+  'add-followers-opportunity': 'write',
+  'add-message-attachments': 'write',
+  'add-remove-contact-from-business': 'write',
+  'add-tags': 'write', // tag-added triggers may start workflows
+  'associations.create-association': 'write',
+  'bulk-delete-media-objects': 'write',
+  'bulk-delete-social-planner-posts': 'write', // CRM-side delete only
+  'bulk-update-media-objects': 'write',
+  'cancel-scheduled-email-message': 'write', // cancels a send, sends nothing
+  'cancel-scheduled-message': 'write', // cancels a send, sends nothing
+  'chat-widget.delete': 'write',
+  'cloneChatWidget': 'write',
+  'contacts.create-association': 'write', // bulk tag update; tag triggers may start workflows
+  'create': 'write',
+  'create-appointment': 'write', // calendar notifications may email/SMS the contact
+  'create-appointment-note': 'write',
+  'create-block-slot': 'write',
+  'create-brand-voice': 'write',
+  'create-business': 'write',
+  'create-calendar': 'write',
+  'create-calendar-group': 'write',
+  'create-calendar-resource': 'write',
+  'create-contact': 'write', // contact-created triggers may start workflows
+  'create-conversation': 'write',
+  'create-custom-field-folder': 'write',
+  'create-custom-value': 'write',
+  'create-design-kit': 'write',
+  'create-email-campaign': 'write', // draft only; sending is schedule-campaign
+  'create-email-template': 'write',
+  'create-event-notification': 'write',
+  'create-link': 'write', // creates trigger link, does not fire it
+  'create-media-folder': 'write',
   'create-note': 'write',
+  'create-object-record': 'write',
+  'create-opportunity': 'write',
+  'create-product': 'write', // product catalog only; prices are separate ops (blocked)
+  'create-product-collection': 'write',
+  'create-recurring-task': 'write',
+  'create-relation': 'write',
+  'create-service-booking': 'write', // booking notifications may fire
+  'create-service-catalog': 'write',
+  'create-service-location': 'write',
+  'create-tag': 'write',
+  'create-task': 'write',
+  'create-template-folder': 'write',
+  'createCalendarSchedule': 'write',
+  'createChatWidget': 'write',
+  'createKnowledgeBase': 'write',
+  'createSchedule': 'write',
+  'custom-fields.create-custom-field': 'write',
+  'custom-fields.delete-custom-field': 'write',
+  'custom-fields.update-custom-field': 'write',
+  'delete-Business': 'write',
+  'delete-appointment-note': 'write',
+  'delete-association': 'write',
+  'delete-brand-voice': 'write',
+  'delete-calendar': 'write',
+  'delete-calendar-resource': 'write',
+  'delete-campaign': 'write',
+  'delete-contact': 'write',
+  'delete-contact-from-workflow': 'write', // removes from workflow, sends nothing
+  'delete-conversation': 'write',
+  'delete-csv': 'write',
+  'delete-csv-post': 'write',
+  'delete-custom-field-folder': 'write',
+  'delete-custom-value': 'write',
+  'delete-design-kit': 'write',
+  'delete-email-template': 'write',
+  'delete-event': 'write', // cancellation notifications may fire
+  'delete-event-notification': 'write',
+  'delete-group': 'write',
+  'delete-link': 'write',
+  'delete-media-content': 'write',
+  'delete-note': 'write',
+  'delete-object-record': 'write',
+  'delete-opportunity': 'write',
+  'delete-post': 'write', // deletes social post record
+  'delete-product-by-id': 'write',
+  'delete-product-collection': 'write',
+  'delete-product-review': 'write',
+  'delete-recurring-task': 'write',
+  'delete-relation': 'write',
+  'delete-service-booking': 'write', // cancellation notifications may fire
+  'delete-service-catalog': 'write',
+  'delete-service-location': 'write',
+  'delete-tag': 'write',
+  'delete-task': 'write',
+  'deleteFile': 'write',
+  'deleteKnowledgeBase': 'write',
+  'deleteQueueItem': 'write',
+  'deleteSchedule': 'write',
+  'deleteTrainedUrlsForKnowledgeBase': 'write',
+  'disable-group': 'write',
+  'discardEditSession': 'write',
+  'discoverWebsite': 'write', // crawls external site
+  'edit-appointment': 'write', // calendar notifications may email/SMS the contact
+  'edit-block-slot': 'write',
+  'edit-group': 'write',
+  'fetchCalendarList': 'write', // POST list; registry kind=write
+  'fetchEditSessionCalendar': 'write', // POST list; registry kind=write
+  'fetchQueueItems': 'write', // POST list; registry kind=write
+  'fetchQueues': 'write', // POST list; registry kind=write
+  'fetchSlots': 'write', // POST list; registry kind=write
+  'get-comment-list': 'write', // POST list; registry kind=write
+  'get-posts': 'write', // POST list, readonly scope; registry kind=write
+  'get-statistics': 'write', // POST list, readonly scope; registry kind=write
+  'get-tags-by-ids': 'write', // POST list; registry kind=write
+  'getSitemapPreview': 'write', // POST lookup, readonly scope; registry kind=write
+  'google-get-keyword-ideas': 'write', // POST lookup, readonly scope; registry kind=write
+  'import-courses': 'write', // imports course content
+  'import-email-template': 'write',
+  'knowledge-base.delete': 'write',
+  'locations.create-custom-field': 'write',
+  'locations.delete-custom-field': 'write',
+  'locations.update-custom-field': 'write',
+  'patchChatWidget': 'write',
+  'remove-calendar-from-schedule': 'write',
+  'remove-contact-from-campaign': 'write', // removes from campaign, sends nothing
+  'remove-contact-from-every-campaign': 'write', // removes from campaigns, sends nothing
+  'remove-followers-contact': 'write',
+  'remove-followers-opportunity': 'write',
+  'remove-tags': 'write',
+  'set-default-brand-voice': 'write',
+  'set-default-design-kit': 'write',
+  'startEditSession': 'write',
+  'trainDiscoveredUrls': 'write', // trains AI knowledge base
+  'update': 'write',
+  'update-appointment-note': 'write',
+  'update-association': 'write',
+  'update-brand-voice': 'write',
+  'update-business': 'write',
+  'update-calendar': 'write',
+  'update-calendar-resource': 'write',
+  'update-contact': 'write',
+  'update-conversation': 'write',
+  'update-custom-field-folder': 'write',
+  'update-custom-object': 'write',
+  'update-custom-value': 'write',
+  'update-design-kit': 'write',
+  'update-display-priority': 'write',
+  'update-email-campaign': 'write', // draft only
+  'update-email-template': 'write',
+  'update-event-notification': 'write',
+  'update-inventory': 'write',
+  'update-link': 'write',
+  'update-media-object': 'write',
+  'update-message-status': 'write', // provider delivery-status update
+  'update-note': 'write',
+  'update-object-record': 'write',
+  'update-opportunity': 'write',
+  'update-opportunity-status': 'write', // stage/status triggers may start workflows
+  'update-product-by-id': 'write', // body can carry prices; price ops themselves are blocked
+  'update-product-collection': 'write',
+  'update-recurring-task': 'write',
+  'update-service-booking': 'write', // booking notifications may fire
+  'update-service-catalog': 'write',
+  'update-service-location': 'write',
+  'update-tag': 'write',
+  'update-task': 'write',
+  'update-task-completed': 'write',
+  'updateCalendarSchedule': 'write',
+  'updateChatWidget': 'write',
+  'updateKnowledgeBase': 'write',
+  'updateSchedule': 'write',
+  'upsert-contact': 'write', // contact-created triggers may start workflows
+  'validate-groups-slug': 'write',
+  'add-an-inbound-message': 'blocked',
+  'add-an-outbound-message': 'blocked', // logs outbound call (phone system)
+  'add-contact-to-campaign': 'blocked',
+  'add-contact-to-workflow': 'blocked',
+  'attach-oauth-accounts': 'blocked', // OAuth account connection
+  'auto-payment-invoice-schedule': 'blocked', // invoices/estimates
+  'bulk-update-product-review': 'blocked', // publishes replies to customer reviews
+  'bulkEdit': 'blocked', // edits prices in bulk
+  'bulkUpdate': 'blocked', // bulk price/availability/delete
+  'cancel-invoice-schedule': 'blocked', // invoices/estimates
+  'charge': 'blocked',
+  'cloneQueueItem': 'blocked', // auto-publishing queue
+  'create-blog-post': 'blocked', // may publish blog post
+  'create-comment': 'blocked', // posts public comment
+  'create-config': 'blocked', // payments
+  'create-coupon': 'blocked', // payments
+  'create-estimate-template': 'blocked', // invoices/estimates
+  'create-integration': 'blocked', // payments
+  'create-integration provider': 'blocked', // payments
+  'create-invoice': 'blocked', // invoices/estimates
+  'create-invoice-from-estimate': 'blocked', // invoices/estimates
+  'create-invoice-schedule': 'blocked', // invoices/estimates
+  'create-invoice-template': 'blocked', // invoices/estimates
+  'create-like': 'blocked', // public action on social platform
+  'create-new-estimate': 'blocked', // invoices/estimates
+  'create-order-fulfillment': 'blocked', // payments
+  'create-post': 'blocked', // social publish
+  'create-price-for-product': 'blocked',
+  'create-redirect': 'blocked', // live website change, effectively publishing
+  'create-shipping-carrier': 'blocked', // store/shipping rates charged at checkout
+  'create-shipping-rate': 'blocked', // store/shipping rates charged at checkout
+  'create-shipping-zone': 'blocked', // store/shipping rates charged at checkout
+  'create-store-setting': 'blocked', // store/shipping rates charged at checkout
+  'create-user': 'blocked', // user/permission settings
+  'createQueue': 'blocked', // auto-publishing queue
+  'createQueueItem': 'blocked', // auto-publishing queue
+  'custom-provider-marketplace-app-update-capabilities': 'blocked', // payments
+  'delete-account': 'blocked', // disconnects social account (integration)
+  'delete-coupon': 'blocked', // payments
+  'delete-estimate': 'blocked', // invoices/estimates
+  'delete-estimate-template': 'blocked', // invoices/estimates
+  'delete-integration': 'blocked', // payments
+  'delete-invoice': 'blocked', // invoices/estimates
+  'delete-invoice-schedule': 'blocked', // invoices/estimates
+  'delete-invoice-template': 'blocked', // invoices/estimates
+  'delete-like': 'blocked', // public action on social platform
+  'delete-price-by-id-for-product': 'blocked',
+  'delete-redirect-by-id': 'blocked', // live website change, effectively publishing
+  'delete-shipping-carrier': 'blocked', // store/shipping rates charged at checkout
+  'delete-shipping-rate': 'blocked', // store/shipping rates charged at checkout
+  'delete-shipping-zone': 'blocked', // store/shipping rates charged at checkout
+  'delete-user': 'blocked', // user/permission settings
+  'deleteCharge': 'blocked',
+  'deleteCurrentActivePostAndScheduleNext': 'blocked', // schedules next post for publishing
+  'disconnect-config': 'blocked', // payments
+  'edit-post': 'blocked', // edits scheduled/published social post
+  'fb-add-custom-audience-member': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-batch-update-audience-members': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-create-conversation-form': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-create-integration': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-create-page-lead-form': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-ad': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-ad-account': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-adset': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-custom-audience': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-integration': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-delete-page': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-duplicate-ad': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-duplicate-adset': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-duplicate-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-pause-ad': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-pause-adset': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-pause-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-publish-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-remove-custom-audience-member': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-resume-ad': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-resume-adset': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-resume-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-set-default-page': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-update-custom-audience': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-upsert-ad': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-upsert-adset': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-upsert-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'fb-upsert-pixel': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-create-integration': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-create-offline-user-list-job': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-delete-ad-account': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-delete-conversion': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-delete-segment': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-publish-ad': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-upsert-assets': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-upsert-audience': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-upsert-campaign': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-upsert-conversion': 'blocked', // ads: spend/publishing/integration/contact upload
+  'google-upsert-segment': 'blocked', // ads: spend/publishing/integration/contact upload
+  'li-create-integration': 'blocked', // ads: spend/publishing/integration/contact upload
+  'li-create-lead-form': 'blocked', // ads: spend/publishing/integration/contact upload
+  'li-delete-ad-account': 'blocked', // ads: spend/publishing/integration/contact upload
+  'li-publish-campaign-group': 'blocked', // ads: spend/publishing/integration/contact upload
+  'li-update-ad-status': 'blocked', // ads: spend/publishing/integration/contact upload
+  'li-upsert-campaign-group': 'blocked', // ads: spend/publishing/integration/contact upload
+  'live-chat-agent-typing': 'blocked', // pushes typing indicator to a live visitor
+  'patch-agent': 'blocked', // voice AI (phone system)
+  'purchase-number-for-location': 'blocked',
+  'record-invoice': 'blocked', // invoices/estimates
+  'record-order-payment': 'blocked', // payments
+  'resetQueueItem': 'blocked', // auto-publishing queue
+  'saveEditSession': 'blocked', // commits queue schedule (auto-publish)
+  'schedule-campaign': 'blocked', // starts sending an email campaign
+  'schedule-invoice-schedule': 'blocked', // invoices/estimates
   'send-a-new-message': 'blocked',
-  /*GHL_OPS_TABLE*/
+  'send-documents-contracts': 'blocked',
+  'send-documents-contracts-template': 'blocked',
+  'send-estimate': 'blocked', // invoices/estimates
+  'send-invoice': 'blocked', // invoices/estimates
+  'set-accounts': 'blocked', // social account/integration settings
+  'start-csv-finalize': 'blocked', // schedules imported posts for publishing
+  'text2pay-invoice': 'blocked', // invoices/estimates
+  'update-and-schedule-invoice-schedule': 'blocked', // invoices/estimates
+  'update-blog-post': 'blocked', // may publish blog post
+  'update-coupon': 'blocked', // payments
+  'update-estimate': 'blocked', // invoices/estimates
+  'update-estimate-template': 'blocked', // invoices/estimates
+  'update-invoice': 'blocked', // invoices/estimates
+  'update-invoice-late-fees-configuration': 'blocked', // invoices/estimates
+  'update-invoice-payment-methods-configuration': 'blocked', // invoices/estimates
+  'update-invoice-schedule': 'blocked', // invoices/estimates
+  'update-invoice-template': 'blocked', // invoices/estimates
+  'update-invoice-template-late-fees-configuration': 'blocked', // invoices/estimates
+  'update-price-by-id-for-product': 'blocked',
+  'update-product-review': 'blocked', // publishes reply to a customer review
+  'update-redirect-by-id': 'blocked', // live website change, effectively publishing
+  'update-shipping-carrier': 'blocked', // store/shipping rates charged at checkout
+  'update-shipping-rate': 'blocked', // store/shipping rates charged at checkout
+  'update-shipping-zone': 'blocked', // store/shipping rates charged at checkout
+  'update-store-status': 'blocked', // publishes/unpublishes products on storefront
+  'update-user': 'blocked', // user/permission settings
+  'updateQueue': 'blocked', // auto-publishing queue status
+  'updateQueueItem': 'blocked', // auto-publishing queue
+  'verify-email': 'blocked', // billed email verification (wallet)
+  'voice-ai.create-action': 'blocked', // voice AI (phone system)
+  'voice-ai.create-agent': 'blocked', // voice AI (phone system)
+  'voice-ai.delete-action': 'blocked', // voice AI (phone system)
+  'voice-ai.delete-agent': 'blocked', // voice AI (phone system)
+  'voice-ai.update-action': 'blocked', // voice AI (phone system)
+  'void-invoice': 'blocked', // invoices/estimates
 }
 
 export const TASKS_DS = 'collection://7f6f9759-bbbf-45aa-ab9a-b2448918a625'
