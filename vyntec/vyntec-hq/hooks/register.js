@@ -25,6 +25,8 @@ export const BUILD = {
   lockIdleMinutes: 30,         // a client lock frees itself after this long without a write
   // Switching something on for real people: a separate T2 yes ("Go live: <what> — <client>", Approved).
   goLiveOps: ['add-contact-to-workflow', 'create-redirect', 'create-blog-post', 'update-blog-post', 'create-post', 'edit-post'],
+  // Blocked ops allowed in a WRITABLE location only when every status in params is one of these (Vinny, 2026-10-10).
+  draftOnlyOps: { 'create-blog-post': ['DRAFT'], 'update-blog-post': ['DRAFT', 'ARCHIVED'] },
   placeOps: ['upload-media-content'], // placing an asset needs a row with rights in clients/<slug>/assets.md
   undo: {                      // operation → how to undo it (the created record's id is added when the response has one)
     'create-contact': 'delete-contact', 'upsert-contact': 'delete-contact (if it was created)', 'update-contact': 'update-contact with the values in the backup',
@@ -634,7 +636,8 @@ function judgeGhl(e, active) {
   if (GHL_META.has(verb)) return null
   if (verb !== 'execute_operation') return { deny: `vyntec platform guard: unknown platform tool "${verb}".` }
   const op = String(e.operationId ?? '')
-  const cls = Object.hasOwn(GHL_OPS, op) ? GHL_OPS[op] : undefined
+  const draftOnly = Object.hasOwn(BUILD.draftOnlyOps, op) && Object.hasOwn(WRITABLE, targetLocation(e) ?? '') && onlyStatuses(e.params, BUILD.draftOnlyOps[op])
+  const cls = draftOnly ? 'write' : Object.hasOwn(GHL_OPS, op) ? GHL_OPS[op] : undefined
   if (cls === undefined) return { deny: `vyntec platform guard: unknown operation ID "${op}". It is not in GHL_OPS (register.js); check it with describe_operation and add it there first.` }
   if (cls === 'blocked') return { deny: `vyntec platform guard: "${op}" sends messages or touches payments, invoices, subscriptions, the phone system or billing. Always refused; a human does it.` }
   const loc = targetLocation(e)
@@ -646,8 +649,14 @@ function judgeGhl(e, active) {
   if (!Object.hasOwn(WRITABLE, loc)) return { deny: `vyntec platform guard: ${active.name} (${loc}) is read only in this phase. Build it in the vyntec Test Lab first; a proven build is promoted by Vinny.` }
   const task = /\bVT-\d+\b/.exec(String(e.reason ?? ''))?.[0]
   if (!task) return { deny: `vyntec platform guard: name the vyntec Tasks entry in "reason" (e.g. "VT-123 add pilot tag") so the change log can link it.` }
-  const goLive = BUILD.goLiveOps.includes(op) || /"status"\s*:\s*"(published|scheduled|active)"/i.test(JSON.stringify(e.params ?? {}))
+  const goLive = !draftOnly && BUILD.goLiveOps.includes(op) || /"status"\s*:\s*"(published|scheduled|active)"/i.test(JSON.stringify(e.params ?? {}))
   return { needsApproved: true, isT0: T0_OPS.has(op), op, task, slug: WRITABLE[loc], loc, goLive, bulk: recordCount(e.params) >= BUILD.bulkMin, place: BUILD.placeOps.includes(op) }
+}
+
+// True when params name at least one status and every one is in the allowed list.
+export function onlyStatuses(params, allowed) {
+  const found = [...JSON.stringify(params ?? {}).matchAll(/"status"\s*:\s*"([^"]*)"/gi)].map(m => m[1].toUpperCase())
+  return found.length > 0 && found.every(v => allowed.includes(v))
 }
 
 // The largest list of records in a write's params (a bulk write), or 1.
