@@ -36,7 +36,7 @@ Status: **draft, PENDING APPROVAL (Vinny)**. Built 2026-10-10. Nothing placed, s
 ## Other open items
 - Sending address for member emails: open (Deployment Plan Q16). The from name is "Seminole Education Association", as in the existing drafts.
 - Dues amounts (FT $733.00/yr, PT $325.20/yr, per the Deployment Plan Q9) are **not** in the copy, because no contact field says which rate a member pays.
-- Logo and colours: none on file. The templates use a neutral, accessible palette (text #1f2933 on #ffffff, accent #1f4e79) and a `LOGO` comment in the header.
+- Design (2026-10-10 redesign after Vinny's feedback): SEA brand per ../brand.md (red #dd2628, dark #111827, Archivo Black + Figtree). Logo 1 from the SEA brand board (assets.md LOGO-1, approval pending Vinny). Copy unchanged.
 
 ## Placement steps (after Vinny approves)
 1. Fill or delete every `[[...]]` placeholder and get Thomas Bugos's answers (policy wording needs his written OK).
