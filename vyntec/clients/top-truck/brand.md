@@ -10,4 +10,4 @@ Content uses only the approved proof points below. Never invent metrics, testimo
 - Approved proof points: none.
 - Prices: none; do not publish any.
 - Shop photos: about 45 `top-trucks-central-florida-*.jpg` files are on vyntec's Google Drive (found 2026-10-10). Usage rights and Joe's OK are not recorded; add each to assets.md with rights before use.
-- Page HTML files: CLAUDE.md says ready files exist (e.g. brand-chevy.html), but they are not in the repo, its history, or Drive (searched 2026-10-10). NEEDS HUMAN: Vinny says where they are.
+- Page HTML files: not reachable by agents (likely in a claude.ai Project); see CLAUDE.md.
