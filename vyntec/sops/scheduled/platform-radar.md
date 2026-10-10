@@ -1,4 +1,6 @@
-# Platform Radar, weekdays (new routine)
+# Platform Radar, weekdays (routine trig_019PksTyJjZRjZXhcN2gDjEG)
+
+**Needs Vinny:** created without connectors (this session could not pass any). Add Notion and Firecrawl to it in claude.ai → Routines before it can run.
 
 Weekdays 7:45 AM ET (`CRON_TZ=America/New_York 44 7 * * 1-5`). Follows `sops/platform-radar.md`: review items go to vyntec Tasks. The older "Platform Radar review (every 3 hours)" routine keeps feeding the claude.ai ops dashboard and is not changed.
 
