@@ -743,7 +743,13 @@ export function summary(c) {
 // --- g. The team: roster, hub-and-spoke guard, hand-off logging, limits, /team, Team tab ---
 
 const TEAM_PANE = 'vyntec-team'
-const teamDir = $ => `${$.plugin.root}/../.team`
+// The vyntec folder: the plugin's parent when run from source, else the session's project root (an installed
+// plugin runs from the plugin cache, whose parent holds no clients/).
+async function vyntecRoot($) {
+  try { if (await $.fs.exists(`${$.plugin.root}/../clients`)) return `${$.plugin.root}/..` } catch {}
+  return await $.session.root()
+}
+const teamDir = async $ => `${await vyntecRoot($)}/vyntec-hq/.team` // runtime files, gitignored
 const NOTION_COMMENT = 'mcp__Notion__notion-create-comment'
 
 // shortcut: header parsing is plain text, upgrade to structured messages if the team grows past 5 sessions.
@@ -763,7 +769,7 @@ export function parseEnvelope(text) {
 }
 
 export async function readRoster($) {
-  try { return JSON.parse(await $.fs.read(`${teamDir($)}/roster.json`)) } catch { return null }
+  try { return JSON.parse(await $.fs.read(`${await teamDir($)}/roster.json`)) } catch { return null }
 }
 
 async function listSessions($) {
@@ -845,7 +851,7 @@ export async function logHandoff($, h, body, note = '') {
 
 async function writeStatus($, role, patch) {
   try {
-    const path = `${teamDir($)}/status/${role}.json`
+    const path = `${await teamDir($)}/status/${role}.json`
     let prev = {}
     try { prev = JSON.parse(await $.fs.read(path)) } catch {}
     await $.fs.write(path, JSON.stringify({ ...prev, ...patch, role }))
@@ -972,10 +978,11 @@ function launchArgs(name, root) {
   return ['claude', '--bg', '--name', name, '--agent', `vyntec-hq:${s.agent}`, '--model', s.model, '--settings', JSON.stringify(settings), prompt]
 }
 
-const isLive = a => a && a.kind === 'background' && !['done', 'stopped', 'failed', 'exited'].includes(String(a.state ?? ''))
+// A stopped background session keeps its row (state done) but loses its pid; a finished turn is also state done.
+const isLive = a => Boolean(a && a.kind === 'background' && a.pid)
 
 async function teamUp($) {
-  const root = `${$.plugin.root}/..`
+  const root = await vyntecRoot($)
   const roster = (await readRoster($)) ?? { sessions: {} }
   roster.chief = { sessionId: await $.session.id() }
   const running = await listSessions($)
@@ -994,7 +1001,7 @@ async function teamUp($) {
     const entry = Object.values(roster.sessions).find(s => s.id && s.id === a.id)
     if (entry) entry.sessionId = a.sessionId
   }
-  await $.fs.write(`${teamDir($)}/roster.json`, JSON.stringify(roster, null, 2))
+  await $.fs.write(`${await teamDir($)}/roster.json`, JSON.stringify(roster, null, 2))
   return `vyntec team up (claude --bg, cwd ${root}):\n${lines.join('\n')}\nchief-of-staff: this session (${roster.chief.sessionId.slice(0, 8)})`
 }
 
@@ -1017,7 +1024,7 @@ export async function teamRows($) {
     const sid = name === TEAM.chief ? roster?.chief?.sessionId : roster?.sessions?.[name]?.sessionId
     const live = running.find(a => sid && a.sessionId === sid)
     let st = {}
-    try { st = JSON.parse(await $.fs.read(`${teamDir($)}/status/${name}.json`)) } catch {}
+    try { st = JSON.parse(await $.fs.read(`${await teamDir($)}/status/${name}.json`)) } catch {}
     const status = !live || (name !== TEAM.chief && !isLive(live)) ? 'offline' : live.status === 'busy' ? 'working' : 'idle'
     const last = st.lastMessageAt ? new Date(st.lastMessageAt).toISOString().slice(11, 16) + 'Z' : '-'
     const usage = st.usd !== undefined ? `$${Number(st.usd).toFixed(2)}${st.contextPercent !== undefined ? ` · ${st.contextPercent}% ctx` : ''}` : '-'
@@ -1092,7 +1099,7 @@ export const register = on => {
     const slug = e.args.trim()
     if (!/^[a-z0-9-]+$/.test(slug)) return { text: 'Usage: /client <slug>, e.g. /client cs-laser (folders under ~/vyntec/clients).' }
     let text
-    try { text = await $.fs.read(`${$.plugin.root}/../clients/${slug}/CLAUDE.md`) } catch {
+    try { text = await $.fs.read(`${await vyntecRoot($)}/clients/${slug}/CLAUDE.md`) } catch {
       return { text: `No client file at clients/${slug}/CLAUDE.md. Active client unchanged.` }
     }
     const active = parseClient(slug, text)

@@ -16,7 +16,10 @@ const connectors = (on, approvedRows: boolean) => {
 // The kit has no disk: answer the client file read with its real opening lines.
 const CS_LASER = '# Client: CS Laser Orlando (slug: cs-laser)\n\n- leadconnector location ID: `MnKKwFSetGRCrkXj7pBU` ("CS Laser Orlando"). Notion Client value: `CS Laser`.\n'
 const CS_LOC = 'MnKKwFSetGRCrkXj7pBU'
-const clientFile = on => on('fs.read', ($, e, next) => (/clients\/cs-laser\/CLAUDE\.md$/.test(e.path) ? { value: CS_LASER } : next(e)))
+const clientFile = on => {
+  on('fs.exists', () => ({ value: true }))
+  on('fs.read', ($, e, next) => (/clients\/cs-laser\/CLAUDE\.md$/.test(e.path) ? { value: CS_LASER } : next(e)))
+}
 const refused = (r: { deny?: string; isError?: boolean; text?: string }) => r.deny !== undefined || r.isError === true
 const reason = (r: { deny?: string; text?: string }) => String(r.deny ?? r.text ?? '')
 
@@ -162,6 +165,8 @@ function team(on, role: string | null, opts: { notionFails?: boolean } = {}) {
   on('session.id', () => ({ value: role === null ? 'sid-chief' : `sid-${role}` }))
   on('fs.read', ($, e, next) => (/\.team\/roster\.json$/.test(e.path) ? { value: JSON.stringify(ROSTER) } : next(e)))
   on('fs.write', () => ({ value: undefined }))
+  on('fs.exists', () => ({ value: false }))
+  on('session.root', () => ({ value: '/home/v/vyntec' }))
   on('store.get', ($, e) => ({ value: mem[e.key] }))
   on('store.set', ($, e) => { mem[e.key] = e.value; return { value: undefined } })
   on('clock.now', () => ({ value: Date.parse('2026-10-10T18:00:00Z') }))
