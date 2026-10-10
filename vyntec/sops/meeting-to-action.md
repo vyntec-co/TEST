@@ -283,7 +283,7 @@ These need real values before the SOP runs cleanly. The four task-list rows repl
 |---|---|
 | Task placement — Precinct prospects | `[Client / Department value]` |
 | Task placement — Clients | Client = the Client value given in `clients/<slug>/CLAUDE.md` |
-| Task placement — Partners/Vendors | `[Client / Department value]` |
+| Task placement — Partners/Vendors | Client = `vyntec internal`, Department = `Chief of Staff` |
 | Task placement — Internal / vyntec ops | Client = `vyntec internal` |
 | Platform location (sub-account) for Precinct pipeline | `[location]` |
 | Platform pipeline + stage names | `[pipeline: stages]` |
