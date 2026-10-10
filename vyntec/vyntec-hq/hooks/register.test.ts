@@ -102,7 +102,7 @@ test('cockpit lists the review queue and Approve sets the Notion status', async 
     await ui.unmount()
   }
   expect(updates.length).toBe(2)
-  expect(updates[0]).toMatchObject({ page_id: 'abc123def4567890abc123def4567890', command: 'update_properties', properties: { Status: 'Approved' } })
+  expect(updates[0]).toMatchObject({ page_id: 'abc123def4567890abc123def4567890', command: 'update_properties', properties: { Status: 'Approved', Outcome: 'Approved as-is' } })
 })
 
 test('parses the Notion connector answer format', async () => {
@@ -341,3 +341,4 @@ test('a new task with no Due and No date unticked is refused, with a reason', as
   const ok2 = await $.tool.call({ tool: 'mcp__Notion__notion-create-pages', parent, pages: [{ properties: { Name: 'y', 'date:Due:start': '2026-10-20' } }] } as never)
   expect(refused(ok1) || refused(ok2)).toBe(false)
 })
+

@@ -748,10 +748,12 @@ export function parseEvents(text) {
 }
 
 // Vinny's cockpit press. It goes through $.mcp.call, so the approval guard (which judges agents' tool calls) never sees it.
-async function setStatus($, url, status) {
+// Each review button also records how the work came out (Outcome), for the Friday per-agent counts in /brief.
+async function setStatus($, url, status, outcome) {
+  const properties = outcome ? { Status: status, Outcome: outcome } : { Status: status }
   try {
-    await notion($, 'notion-update-page', { page_id: pageId(url), command: 'update_properties', properties: { Status: status }, allow_async: false })
-    $.ui.toast(`Task set to ${status}.`)
+    await notion($, 'notion-update-page', { page_id: pageId(url), command: 'update_properties', properties, allow_async: false })
+    $.ui.toast(`Task set to ${status}${properties.Outcome ? ` · ${properties.Outcome}` : ''}.`)
   } catch (err) { $.ui.toast(`Could not set ${status}: ${String(err?.message ?? err).slice(0, 120)}`) }
   await refresh($)
 }
@@ -1216,8 +1218,9 @@ export const register = on => {
     const c = await read($, cockpit)
     const row = (t, withButtons) => h(Box, { key: t.url, flexDirection: 'row', gap: 1 },
       h(Text, null, `${t.name}${t.client ? ` · ${t.client}` : ''}`),
-      withButtons ? h(Button, { key: `ok:${t.url}`, label: 'Approve', variant: 'primary', onPress: () => setStatus($, t.url, 'Approved') }) : null,
-      withButtons ? h(Button, { key: `no:${t.url}`, label: 'Reject', onPress: () => setStatus($, t.url, 'In progress') }) : null)
+      withButtons ? h(Button, { key: `ok:${t.url}`, label: 'Approve as-is', variant: 'primary', onPress: () => setStatus($, t.url, 'Approved', 'Approved as-is') }) : null,
+      withButtons ? h(Button, { key: `ed:${t.url}`, label: 'Approve (edited)', onPress: () => setStatus($, t.url, 'Approved', 'Edited') }) : null,
+      withButtons ? h(Button, { key: `no:${t.url}`, label: 'Reject', onPress: () => setStatus($, t.url, 'In progress', 'Rejected') }) : null)
     return h(Box, { flexDirection: 'column' },
       c.error ? h(Text, { color: 'red' }, c.error) : null,
       h(Text, { bold: true }, `Needs your review (${c.review.length})`),
