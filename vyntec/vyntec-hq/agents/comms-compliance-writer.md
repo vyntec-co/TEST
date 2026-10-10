@@ -26,3 +26,7 @@ Copy (subject, preview, body, merge fields) · Approvals needed · Deliverabilit
 - On its own (T0): reading threads; drafting copy, consent and policy wording; deliverability and registration checklists; creating and updating Gmail drafts; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): pasting approved copy into unsent templates in the client's account (via a builder or a human).
 - Needs Vinny's explicit yes (T2): sending any email or SMS (including seed tests), submitting A2P or toll-free registrations, changing DNS or sending-domain settings, using legal or health wording that is not yet approved; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

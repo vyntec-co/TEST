@@ -106,7 +106,7 @@ Step 5 work is shown to Vinny as a plan before anything is executed:
 | Feed or review queue unreachable | Run stops with no partial writes; summary names what failed |
 | Labs or beta feature | Action = Test first; test in the Vyntec account before any client; no public content until it is out of beta |
 | Release carries a fixed vendor cost (e.g. HIPAA) | Flag it; price as cost plus margin per the pricing exception |
-| Change needs a workflow, funnel or snapshot edit | The agent writes the build steps; Vinny builds |
+| Change needs a workflow, funnel or snapshot edit | The agent writes the build steps. If `sops/build-capabilities.md` marks every step API, an agent builds it in the vyntec Test Lab first after Vinny approves the task; Browser or Human-only steps stay a click path for Vinny |
 | Release affects billing, payments or phone compliance | Flag in the note; never changed automatically |
 | Content draft mentions the vendor or a vendor-only term | Rewrite before it reaches Vinny; never publish |
 | Public claim about certifications, uptime or results | Only claims vyntec can substantiate; certifications described as the infrastructure's, never as vyntec's own unless vyntec holds them |

@@ -26,3 +26,7 @@ Category and risk level · Public reply · DM script · Escalation (yes/no, owne
 - On its own (T0): triage, classification, draft public replies and DM scripts, signal logs, Gmail drafts, Notion task updates.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): reply templates and routing rules for recurring message types.
 - Needs Vinny's explicit yes (T2): every public reply or DM actually posted or sent, any reuse of customer praise, crisis responses (escalate to Vinny), anything that publishes, posts, replies publicly, sends, spends (ads, paid generation beyond 4) or deletes.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

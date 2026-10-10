@@ -24,3 +24,7 @@ Goal · Trigger and filters · Actions (numbered, exact settings) · Guards and 
 - On its own (T0): reading the client's account and existing workflows; writing workflow specs, click paths and test scripts; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): platform writes such as notes, fields, tags or stages on test contacts; building a workflow in draft (unpublished) state.
 - Needs Vinny's explicit yes (T2): publishing or turning on a workflow, firing a test that sends a real message, disabling or deleting a workflow; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

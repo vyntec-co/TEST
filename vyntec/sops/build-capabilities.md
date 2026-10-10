@@ -119,3 +119,20 @@ All write and delete operations below report `requiresApproval: true` and `idemp
 ## Pilot results
 
 (Filled in as pilots run in the Test Lab.)
+
+## Domain connection (Human only): step list
+Click path INFERRED (not run from this install; confirm on first use). No API op covers domain connection, and it touches DNS at the client's registrar (credentials Vinny or the client holds). Steps for Vinny:
+1. Ask the client who controls DNS for the domain (registrar login stays with them; never store it).
+2. In the sub-account: Settings → Domains → Add domain → enter the domain or subdomain (e.g. `www.client.com` or `go.client.com`).
+3. Copy the DNS records the platform shows (usually an A record for the root and/or a CNAME for the subdomain).
+4. The client (or Vinny on a screen share) adds them at the registrar. Remove conflicting old A/CNAME records only with the client's yes.
+5. Back in Domains → Verify. DNS can take up to 48 hours; SSL is issued after verification.
+6. Link the domain to the website or funnel; set the default page.
+7. Test: open http:// and https:// on the domain and `www.`; each loads the right page with a valid certificate. Record the result as Evidence.
+Go-live: pointing a live domain is T2: needs `Go live: domain <domain> — <client>` Approved.
+
+## Waiting-loop dry run (2026-10-10)
+- Real item VT-3 "Waiting: pricing proposal from NMI Finance — NMI", Follow up 2026-10-17. On that date the morning brief would draft a nudge to Michael Connelly in the existing thread. **Finding:** VT-3 is blocked on our own Partner Assessment Form ("Complete & return Partner Assessment Form — NMI", not yet sent). A nudge before we return the form would ask NMI for something they can't start. Rule added: a Waiting item whose body says it starts after one of OUR open tasks gets no nudge; the brief lists our open task instead.
+- Draft the brief would have written (not created): "Hi Michael, following up on the pricing proposal with Finance. We're finishing the Partner Assessment Form on our side and will send it over shortly so your team can get started. Talk soon, Vinny Mele · vyntec".
+- The routine trig_01MYScY32jTUQnZVYdTwd6DA still has the old FOLLOW-UPS line: sops/scheduled/morning-brief.md has the new one; saving it to the routine waits for Vinny's yes.
+- Fake reply test on "Waiting: Pilot reply — vyntec Test Lab": the reply note was added and the task moved Waiting on someone → Queued, Follow up cleared. PASS.

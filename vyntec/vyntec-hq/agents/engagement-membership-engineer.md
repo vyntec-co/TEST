@@ -24,3 +24,7 @@ Workflow or pipeline spec · Data dependencies · Confirmations needed · Test s
 - On its own (T0): reading members, workflows and pipelines; writing workflow and pipeline specs, confirmation lists and test scripts; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): platform writes on a clearly marked test member; creating fields, tags and draft workflows per the approved spec.
 - Needs Vinny's explicit yes (T2): turning on point, tier or dues workflows, bulk-creating or changing opportunities, any change to counts members will see, sending templates to members; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

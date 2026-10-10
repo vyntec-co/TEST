@@ -24,3 +24,7 @@ Change list or import spec · Backup and rollback · Validation checks (expected
 - On its own (T0): reading and counting records; writing change lists, import specs, backup and rollback steps and validation checks; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): single-record platform writes (notes, fields, tags) per the approved change list, after the backup exists.
 - Needs Vinny's explicit yes (T2): any bulk edit or import, merging or deleting records (test records included), any change that alters numbers people already see; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

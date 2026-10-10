@@ -26,3 +26,7 @@ Sprint plan table (task, owner, estimate, start, due, depends on, DoD) · Capaci
 - On its own (T0): sprint plans, capacity reports, gate status, asset filing and archiving plans, Notion task creation and updates.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): the sprint commitment.
 - Needs Vinny's explicit yes (T2): moving anything to scheduled or live, anything that publishes, posts, replies publicly, sends, spends (ads, paid generation beyond 4) or deletes.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

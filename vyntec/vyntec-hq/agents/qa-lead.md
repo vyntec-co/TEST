@@ -24,3 +24,7 @@ Acceptance criteria · Test script · Evidence (what was checked and seen) · Ve
 - On its own (T0): reading the build to verify it; fetching live public pages; writing acceptance criteria, test scripts, evidence and verdicts; updating Notion tasks (marking complete only on PASS).
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): running tests that write to the platform on clearly marked test records.
 - Needs Vinny's explicit yes (T2): any test that sends a real message, charges or refunds money, or changes live data; marking work complete without a PASS; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

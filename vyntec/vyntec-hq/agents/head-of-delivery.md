@@ -26,3 +26,7 @@ Lead with the recommendation or the decision needed; one line per specialist on 
 - On its own (T0): reading tasks, calendars, meeting notes and build notes; writing delivery plans; delegating to specialists; creating and updating Notion tasks; creating Gmail drafts.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): starting the execution of a delivery plan whose steps write to the platform, Calendar or Drive.
 - Needs Vinny's explicit yes (T2): anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

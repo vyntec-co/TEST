@@ -26,3 +26,7 @@ Form or workflow spec · Send logic and fallbacks · Wording drafts (NEEDS ATTOR
 - On its own (T0): reading existing forms and workflows; writing form and workflow specs, send logic and test scripts; drafting wording marked NEEDS ATTORNEY APPROVAL; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): creating custom fields and unpublished draft forms per the approved spec.
 - Needs Vinny's explicit yes (T2): publishing a form or turning on the workflow that sends it, using any legal, waiver or health wording, collecting real health data; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

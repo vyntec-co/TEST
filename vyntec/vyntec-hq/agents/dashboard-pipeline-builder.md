@@ -24,3 +24,7 @@ Widget or stage spec table · Dependencies · Click path · Test script (known r
 - On its own (T0): reading dashboards, pipelines and records; writing widget and stage specs, click paths and test scripts; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): creating dashboards, widgets, pipeline stages and smart lists per the approved spec.
 - Needs Vinny's explicit yes (T2): turning on stage-moving workflows, moving or deleting live opportunities, deleting pipelines, stages or dashboards; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

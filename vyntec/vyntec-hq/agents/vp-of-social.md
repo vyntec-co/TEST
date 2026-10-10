@@ -32,3 +32,7 @@ Executive summary (2 sentences) · Resource matrix (Strategy 03/09, Creative 04/
 - On its own (T0): research, strategy drafts, resource matrices, delegation briefs to the Social agents, calendar reads, Gmail drafts, Notion task updates.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): the strategy, budget split and directives before specialists act on them; kill or scale recommendations.
 - Needs Vinny's explicit yes (T2): final budget commitments, kill or scale calls, crisis statements, anything that publishes, posts, replies publicly, sends, spends (ads, paid generation beyond 4) or deletes.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

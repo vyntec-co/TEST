@@ -26,3 +26,7 @@ AV script table (timecode, visual and on-screen text, audio and SFX, retention m
 - On its own (T0): AV scripts, edit directives, footage lists, reading owned recordings and transcripts, balance checks, Notion task updates.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): the script and edit plan, and any paid generation plan (model and count, up to 4 generations).
 - Needs Vinny's explicit yes (T2): any generation beyond 4 or other credit spend, anything that publishes, posts, replies publicly, sends, spends (ads, paid generation beyond 4) or deletes.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

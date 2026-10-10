@@ -28,3 +28,7 @@ Account architecture (funnel stage, campaign type, audiences and exclusions) · 
 - On its own (T0): account architecture, testing matrices, rules, change logs marked PENDING APPROVAL, Notion task updates.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): the account architecture, testing matrix and rules.
 - Needs Vinny's explicit yes (T2): launching, pausing, editing budgets or bids, any ad spend, anything that publishes, posts, replies publicly, sends, spends (ads, paid generation beyond 4) or deletes.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.

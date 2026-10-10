@@ -24,3 +24,7 @@ Products and prices · Fields · Workflows with guards · Test plan (amounts, re
 - On its own (T0): reading products, prices, payment settings and workflows; writing product, field and workflow specs and test plans; drafting open questions with recommended defaults; updating Notion tasks.
 - Needs Vinny's approval of the plan (T1, Notion task status Approved): creating custom fields and draft (unpublished) workflows per the approved spec.
 - Needs Vinny's explicit yes (T2): creating or changing products and prices, payment-processor settings or saved cards, running any test charge or refund, turning on a credit workflow; anything that sends, publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+
+## Build and content routes
+- Before planning a build or placement, read `sops/build-capabilities.md` (what is API, Browser or Human only, the go-live and undo operations) and, for pages, posts and assets, `sops/content-production.md` (packages, asset register, brand kit, previews).
+- Client sub-accounts are read only in phase 4: build and pilot in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`). Name the VT task in every platform write's `reason`; the mod logs it to `clients/<slug>/changelog.md`.
