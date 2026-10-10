@@ -246,7 +246,9 @@ Next steps
 [Next meeting: [date/time] — invite coming] OR [Would any of these work for a follow-up? [options]]
 
 Talk soon,
-Vinny
+Vinny Mele · vyntec
+Vinny@vyntec.co
+407-969-9070 · vyntec.co
 ```
 
 ### 9b. Internal summary (Partner / Internal)
@@ -289,7 +291,7 @@ These need real values before the SOP runs cleanly. The four task-list rows repl
 | Platform pipeline + stage names | `[pipeline: stages]` — Precinct prospects only (used by the Step 8 stage check); not needed until then |
 | Drive root folder for meeting records | `VYNTEC Internal / Meetings` — https://drive.google.com/drive/folders/1t4e_Hz1I6kuyjlrwMK1fgvimJwR4_gGP (folder ID `1t4e_Hz1I6kuyjlrwMK1fgvimJwR4_gGP`, owner info@vyntec.co) |
 | Primary transcript source | Granola / Zoom |
-| Email signature block | `[signature]` |
+| Email signature block | Vinny Mele · vyntec<br>Vinny@vyntec.co<br>407-969-9070 · vyntec.co |
 
 ## 12. Metrics
 
