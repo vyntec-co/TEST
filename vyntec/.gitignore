@@ -1,0 +1,11 @@
+# Secrets never go in git
+.env
+.env.*
+*.pem
+*.key
+*token*
+*secret*
+credentials*.json
+.mcp.json
+# Runtime team state
+vyntec-hq/.team/
