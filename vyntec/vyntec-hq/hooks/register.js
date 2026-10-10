@@ -612,6 +612,7 @@ const cockpit = atom({ plugin: 'vyntec-hq', key: 'cockpit' }, { review: [], bloc
 
 export const VENDOR = /gohighlevel|go high level|highlevel|leadconnector|\bghl\b/i
 // Sends, publishes, charges, spends, deletes. Gmail create_draft/update_draft carry none of these words.
+// shortcut: paid generation is refused outright because every Generation budget is 0, count against the client file's budget and the cap of 4 once Vinny sets a budget above 0
 const OUTWARD = /send|forward|reply|respond|publish|deploy|delete|trash|remove|purge|charge|refund|pay|purchase|checkout|spam|share_file|invite|generate|upscale|outpaint|reframe|dubbing|voice_change|create_voice|motion_control|execute_preset|influencer|shorts_studio_create|remix/i
 const GHL_META = new Set(['list_locations', 'search_operations', 'describe_operation'])
 

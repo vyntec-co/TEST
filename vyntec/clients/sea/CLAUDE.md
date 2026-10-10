@@ -7,3 +7,14 @@
 
 ## Engagement and membership build (engagement-membership-engineer)
 Members, dues, 14 committees, worksites with representatives; an engagement points program (workflows for Board Member, Event Ambassador and Worksite Rep points; Member Activation Points; Recalculate Engagement Tier; the annual July 1 reset is deferred); a Membership Recruitment pipeline with 2,496 auto-created opportunities; a Sunshine Fund pipeline; Communities; 11 engagement, committee and dues email templates not yet built; a Contact Your Rep form with a notification workflow.
+
+## Gates
+Work that depends on an OPEN gate goes to Blocked with `NEEDS HUMAN: <gate> — <who decides>`.
+| Gate | Status | Who decides | Blocks |
+|---|---|---|---|
+| A2P 10DLC | OPEN: status not checked | Vinny with Union OS | any SMS to members going live |
+| Section 8.2 | OPEN (from the SEA open-questions list) | Thomas Bugos / Will Dishman | the work that depends on it |
+| Live Union OS location | OPEN: two "Union OS" locations | Vinny | anything built in the Union OS sub-account |
+
+## Generation budget
+- Paid image/video generations per month: 0 (Vinny sets this). Request cap: 4.

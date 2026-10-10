@@ -66,7 +66,7 @@ Every SOP run writes one row per source item it handled: Name (title), Source (G
 
 ## Definition of done (client work)
 A client task (Client is not `vyntec internal`) is Done only when all of these hold. The mod refuses Status Done otherwise.
-- **QA = PASS**, set after qa-lead checked the work (`sops/qa-verification.md`).
+- **QA = PASS**, set after the qa-lead agent checked the work.
 - **Evidence** says what proved it: test-contact results, a live URL check, or numbers that match the source.
 - **Client approval**, when **Needs client approval** is ticked: the client's words with the date, or a link to their message.
 

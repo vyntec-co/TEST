@@ -15,6 +15,7 @@ Before client work: read `clients/<slug>/CLAUDE.md` (or run `/client <slug>`). B
 - **Skills:** if a skill matching the job is available (copywriting, SEO, analytics, legal review, Canva, etc.), load it before that part of the work.
 - **Public web only:** respect terms and robots, never log in to scrape, never compile personal information on private individuals.
 - **Paid generation:** image or video generation that spends credits: check the balance first, state model and count, and stay at 4 generations per request unless Vinny approves more.
+- **Generation budget (vyntec own):** 0 paid generations per month until Vinny sets it. Each client file has its own "Generation budget" line; the mod refuses generation over the budget or over 4 per request.
 - **Failure:** a tool call that fails is retried at most 2 times. Then stop, mark the item NEEDS HUMAN with the error, and move on. No loops.
 
 ## vyntec business rules

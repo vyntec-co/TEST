@@ -14,3 +14,16 @@ Live package terms in the build's product descriptions (REAL, updated Oct 8): de
 
 ## Dashboard and pipelines (dashboard-pipeline-builder)
 Dashboard "CS Laser Overview" (default range This month), ten widgets in four rows: Consults Booked; Consult to Client Conversion; Revenue (payments, sum of succeeded); Clients Due or Overdue; Consult Funnel; Lost Reasons; Active Clients by Stage; Appointments by Status; Consults by Source; Revenue by Month. Pipelines "Consult -> Client" and "Active Clients", moved by workflows W6 to W9a. Smart lists wanted: Due for Rebook, Overdue, Forms missing, Photo consent refused.
+
+## Gates
+Work that depends on an OPEN gate goes to Blocked with `NEEDS HUMAN: <gate> — <who decides>`.
+| Gate | Status | Who decides | Blocks |
+|---|---|---|---|
+| HIPAA | ON HOLD (Vinny, Oct 7): build without it; keep health data to what the forms need | Vinny | anything adding health data beyond the forms; BAAs and pricing |
+| Waiver/release wording and the "non-invasive" claim | OPEN: needs attorney approval | Attorney via Vinny | publishing W3a/W3b/Form 6 wording, any page or post using the claim |
+| Payment processor (Stripe vs Noomerik/NMI) | OPEN: Noomerik ran the Sep 22 test charge; Stripe unconfirmed | Vinny with Courtney | payment links, plans, deposits going live |
+| Legal business name | OPEN: CS Laser LLC vs Clean Slate Laser, LLC | Vinny with Courtney | new form and policy wording |
+| A2P 10DLC | OPEN: status not checked | Vinny | any SMS workflow going live |
+
+## Generation budget
+- Paid image/video generations per month: 0 (Vinny sets this). Request cap: 4.
