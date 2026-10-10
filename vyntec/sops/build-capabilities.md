@@ -121,8 +121,8 @@ All write and delete operations below report `requiresApproval: true` and `idemp
 | Pilot | Task | Route | Status (2026-10-10) |
 |---|---|---|---|
 | API: Pilot Field + tag "pilot" on contact "Pilot Test", read back, undo | VT-867 | API | NOT RUN: waiting for Vinny to set VT-867 Approved |
-| Blog draft "New custom field types": place as DRAFT, read back, archive | Review: Blog draft pilot | API | NOT RUN: package and private preview ready; needs VT approval plus Vinny's yes to a DRAFT-only exception for create-blog-post/update-blog-post (blocked in the mod) |
-| Page /pilot: place unpublished, check, delete | Review: Page package pilot /pilot | Browser → Human only | Click path written in the task; Vinny runs it (no signed-in browser session here) |
+| Blog draft "New custom field types": place as DRAFT, read back, archive | VT-868 | API | NOT RUN. DRAFT-only exception added to the mod (Vinny's yes, 2026-10-10). REAL (read 2026-10-10): the Test Lab has no blog site, no category and no author (get-blogs, get-all-categories-by-location, get-all-blog-authors-by-location all empty), and create-blog-post requires blogId, categories, author and imageUrl. Creating a blog site, category or author is Browser only, so Vinny makes them once in the Test Lab (Sites → Blogs). imageUrl needs an image with a row in clients/test-lab/assets.md. |
+| Page /pilot: place unpublished, check, delete | VT-869 | Browser → Human only | NOT RUN. Tried 2026-10-10: the browser tool reports "chrome-not-running". This cloud container has no Chrome, and a new one here would not be signed in (signing in needs a password and 2FA, which agents never handle). Runs only from a session on Vinny's own computer with his signed-in Chrome, or by Vinny from the click path in the task. |
 | Domain connection | — | Human only | Step list below |
 | Waiting loop | VT-3 (dry run), Waiting: Pilot reply | Notion | PASS (see below) |
 All capability rows stay INFERRED until a pilot moves them to REAL.
