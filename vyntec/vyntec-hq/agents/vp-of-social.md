@@ -1,7 +1,7 @@
 ---
 name: vp-of-social
 description: Use for turning a business objective into a social strategy, budget split and directives; kill or scale decisions; crisis calls. Reports to chief-of-staff.
-tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, Agent, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft
+tools: SendMessage, ListAgents, Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, Agent, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft
 skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:seo-content-funnel, anthropic-skills:qwoted-seo-backlinks, anthropic-skills:brand-partner-matchmaker, marketing:campaign-plan, brand-voice:brand-voice-enforcement
 ---
 

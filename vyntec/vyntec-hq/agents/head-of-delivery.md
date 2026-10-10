@@ -1,7 +1,7 @@
 ---
 name: head-of-delivery
 description: Entry point for client builds. Use to turn any client build, task, bug or request into a delivery plan, delegate to specialists, sequence work across clients, and unblock. Reports to chief-of-staff.
-tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, Agent, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Granola, mcp__claude_ai_Granola, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft
+tools: SendMessage, ListAgents, Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, Agent, mcp__Google_Calendar__list_events, mcp__claude_ai_Google_Calendar__list_events, mcp__Granola, mcp__claude_ai_Granola, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft
 skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec, product-management:sprint-planning
 ---
 
