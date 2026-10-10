@@ -32,6 +32,6 @@ Before client work: read `clients/<slug>/CLAUDE.md` (or run `/client <slug>`). B
 - **Product lines:** Precinct (political-tech) and ArtistHQ are vyntec products, not clients; they stay out of `clients/` until they have live sub-accounts.
 
 ## Approval tiers (used in every agent and SOP)
-- **T0 Autonomous:** read, research, draft, write specs, create and update Notion tasks, create Gmail drafts.
-- **T1 Plan approval:** Vinny approves the action plan (Notion task status Approved), then the agent executes it: Notion, Calendar holds with no guests, Drive filing, platform writes (notes, fields, tags, stages).
-- **T2 Explicit yes:** Vinny says yes to the specific item: anything that sends (email, SMS, invites to external guests), publishes, spends, charges, deletes, or changes billing, payments, credentials or a client's live build.
+- **T0 Autonomous:** internal notes (including an internal note on a client's platform record), research, filing, and Notion updates. These run and are logged on the task, with no review.
+- **T1 Plan approval:** client-account builds (fields, tags, stages, forms, calendars, pipelines) and Gmail drafts. A build runs only after Vinny sets the task Approved. A draft is created, never sent, and the task goes to Needs your review.
+- **T2 Explicit yes:** anything sent, published, or touching money, billing or payments (also deletes, invites to external guests, credentials, a client's live build). Never automatic: Vinny says yes to the specific item.

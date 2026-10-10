@@ -6,10 +6,14 @@ const GHL = 'mcp__leadconnector__execute_operation'
 const DRAFT = 'mcp__Gmail__create_draft'
 
 // The test's own hooks stand for the connectors: answer every tool the mod lets through.
-const connectors = (on, approvedRows: boolean) => {
-  on('tool.call', { tool: NOTION_QUERY }, () => ({
-    result: [{ type: 'text', text: approvedRows ? '[{"url":"https://www.notion.so/abc123def4567890abc123def4567890"}]' : '[]' }],
+// approvedRows: an Approved task exists. t0Rows: an open T0 task exists (answers the tier query only).
+const connectors = (on, approvedRows: boolean, t0Rows = false) => {
+  const row = '[{"url":"https://www.notion.so/abc123def4567890abc123def4567890"}]'
+  on('tool.call', { tool: NOTION_QUERY }, ($, e) => ({
+    result: [{ type: 'text', text: ((e as never as { data: { params: string[] } }).data.params[0] === 'T0 Autonomous' ? t0Rows : approvedRows) ? row : '[]' }],
   }))
+  on('tool.call', { tool: 'mcp__Notion__notion-update-page' }, () => ({ result: [{ type: 'text', text: 'updated' }] }))
+  on('tool.call', { tool: 'mcp__Notion__notion-create-pages' }, () => ({ result: [{ type: 'text', text: 'created' }] }))
   on('tool.call', { tool: GHL }, () => ({ result: [{ type: 'text', text: 'created' }] }))
   on('tool.call', { tool: DRAFT }, () => ({ result: [{ type: 'text', text: 'draft saved' }] }))
 }
@@ -297,4 +301,43 @@ test('a newly Approved task wakes the chief with the department to assign it to'
   expect(prompts[0]).not.toMatch(/VT-3/)
   await $.session.start(start)
   expect(prompts.length).toBe(1) // never routed twice
+})
+
+// --- phase 3: tiers and the due-date rule ---
+test('a T0 Notion update runs with no approval', async ($, on) => {
+  connectors(on, false)
+  const r = await $.tool.call({ tool: 'mcp__Notion__notion-update-page', page_id: 'abc', command: 'update_properties', properties: { Status: 'In progress', Rollovers: 1 } } as never)
+  expect(refused(r)).toBe(false)
+})
+
+test('a T0 internal note on the platform runs under an open T0 task without Approved', async ($, on) => {
+  connectors(on, false, true)
+  clientFile(on)
+  await $.command.run({ command: 'client', args: 'cs-laser' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'Research notes' } } as never)
+  expect(refused(r)).toBe(false)
+})
+
+test('a T1 client build is refused unless Approved, even with an open T0 task', async ($, on) => {
+  connectors(on, false, true)
+  clientFile(on)
+  await $.command.run({ command: 'client', args: 'cs-laser' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-custom-field-folder', locationId: CS_LOC, params: { name: 'Packages' } } as never)
+  expect(reason(r)).toMatch(/Approved/)
+})
+
+test('a T2 send is refused even with an Approved task', async ($, on) => {
+  connectors(on, true, true)
+  const r = await $.tool.call({ tool: 'mcp__Gmail__send_message', to: ['joe@example.com'], subject: 'Update', body: 'x' } as never)
+  expect(refused(r)).toBe(true)
+})
+
+test('a new task with no Due and No date unticked is refused, with a reason', async ($, on) => {
+  connectors(on, false)
+  const parent = { type: 'data_source_id', data_source_id: '7f6f9759-bbbf-45aa-ab9a-b2448918a625' }
+  const r = await $.tool.call({ tool: 'mcp__Notion__notion-create-pages', parent, pages: [{ properties: { Name: 'Email Joe — Top Truck', Status: 'Queued' } }] } as never)
+  expect(reason(r)).toMatch(/needs Due .* or No date ticked. Missing on: Email Joe/)
+  const ok1 = await $.tool.call({ tool: 'mcp__Notion__notion-create-pages', parent, pages: [{ properties: { Name: 'x', 'No date': '__YES__' } }] } as never)
+  const ok2 = await $.tool.call({ tool: 'mcp__Notion__notion-create-pages', parent, pages: [{ properties: { Name: 'y', 'date:Due:start': '2026-10-20' } }] } as never)
+  expect(refused(ok1) || refused(ok2)).toBe(false)
 })

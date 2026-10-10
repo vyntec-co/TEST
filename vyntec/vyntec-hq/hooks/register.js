@@ -625,8 +625,13 @@ function judgeGhl(e, active) {
   if (!active) return { deny: `vyntec platform guard: "${op}" is a write and no client is active. Run /client <slug>, and have Vinny approve the task first.` }
   if (loc !== active.locationId) return { deny: `vyntec platform guard: "${op}" is a write; pass locationId ${active.locationId} (${active.name}) explicitly.` }
   if (VENDOR.test(JSON.stringify(e.params ?? {}))) return { deny: 'vyntec white-label guard: this platform write names the underlying vendor. Rewrite it as "the platform" / link.vyntec.co / Union OS.' }
-  return { needsApproved: true }
+  return { needsApproved: true, isT0: T0_OPS.has(op) }
 }
+
+// T0 platform writes: internal notes on a record. They run under an open T0 task, no Approved status needed.
+// shortcut: an open T0 task for the active client unlocks these ops for that client, upgrade when tasks carry the exact operation they cover
+const T0_OPS = new Set(['create-note', 'update-note', 'create-appointment-note', 'update-appointment-note'])
+const TASKS_DS_ID = '7f6f9759-bbbf-45aa-ab9a-b2448918a625'
 
 // Returns { deny } | { needsApproved: true } | null (allowed). `active` is the /client selection, or null.
 export function judge(e, active = null) {
@@ -639,6 +644,10 @@ export function judge(e, active = null) {
     }
     if (/notion/i.test(tool) && /^notion-(update-page|create-pages)$/.test(verb) && /"Status"\s*:\s*"Approved"/.test(JSON.stringify(e))) {
       return { deny: 'vyntec approval guard: only Vinny sets a task to Approved (cockpit Approve button or Notion). Put it in Needs your review.' }
+    }
+    if (/notion/i.test(tool) && verb === 'notion-create-pages' && JSON.stringify(e.parent ?? '').includes(TASKS_DS_ID)) {
+      const undated = (e.pages ?? []).filter(pg => !pg?.properties?.['date:Due:start'] && pg?.properties?.['No date'] !== '__YES__')
+      if (undated.length) return { deny: `vyntec due-date rule: every new task needs Due (from a stated or approved date) or No date ticked. Missing on: ${undated.map(pg => pg?.properties?.Name ?? '(no name)').slice(0, 5).join('; ')}.` }
     }
     if (/calendar/i.test(tool) && /^(create|update)_event$/.test(verb) && Array.isArray(e.attendees) && e.attendees.length > 0) {
       return { deny: 'vyntec guard: an event with guests sends invites. Create it without attendees, or get Vinny\'s explicit yes.' }
@@ -662,6 +671,20 @@ export async function hasApprovedTask($, notionClient) {
       data_source_urls: [TASKS_DS],
       query: `SELECT url FROM "${TASKS_DS}" WHERE "Status" = ? AND "Client" = ? LIMIT 1`,
       params: ['Approved', notionClient],
+    },
+  })
+  if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion query failed')
+  return /notion\.(so|com)\//.test(toText(ran))
+}
+
+export async function hasOpenT0Task($, notionClient) {
+  const ran = await $.tool.call({
+    tool: await resolveTool($, NOTION_QUERY),
+    data: {
+      mode: 'sql',
+      data_source_urls: [TASKS_DS],
+      query: `SELECT url FROM "${TASKS_DS}" WHERE "Approval tier" = ? AND "Client" = ? AND "Status" IN ('Queued', 'In progress') LIMIT 1`,
+      params: ['T0 Autonomous', notionClient],
     },
   })
   if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion query failed')
@@ -1089,10 +1112,10 @@ export const register = on => {
     if (verdict === null) return next(e)
     if (verdict.deny) return { deny: verdict.deny }
     let ok = false
-    try { ok = await hasApprovedTask($, active.notionClient) } catch (err) {
+    try { ok = await hasApprovedTask($, active.notionClient) || (verdict.isT0 && await hasOpenT0Task($, active.notionClient)) } catch (err) {
       return { deny: `vyntec platform guard: could not check Notion for an Approved task (${String(err?.message ?? err).slice(0, 120)}). Not writing.` }
     }
-    return ok ? next(e) : { deny: `vyntec platform guard: no vyntec Tasks entry for ${active.name} has status Approved. Put the plan in Needs your review and wait for Vinny's approval.` }
+    return ok ? next(e) : { deny: `vyntec platform guard: no vyntec Tasks entry for ${active.name} has status Approved${verdict.isT0 ? ' and none is an open T0 task' : ''}. Put the plan in Needs your review and wait for Vinny's approval.` }
   }).catch(($, e, next) => {
     // Re-entry (a call made beneath this hook's own $ call): judge without awaiting anything.
     if (next.error?.kind === 're-entry') { const v = judge(e); return v === null ? next(e) : { deny: v.deny ?? 'vyntec guard: platform write refused during a nested call.' } }

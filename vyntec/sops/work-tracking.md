@@ -19,7 +19,8 @@ Assignee for Vinny Mele: Notion user `user://265d872b-594c-8127-b2e6-0002989f09a
 | Needs your review | A plan, draft or spec is ready for Vinny | executing agent |
 | Approved | Vinny approved; the plan may be executed (T1) | Vinny only (cockpit Approve button or Notion) |
 | Done | Shipped and verified (client builds need a qa-lead PASS or Vinny's say-so) | executing agent |
-| Blocked | Waiting on a person or decision; NEEDS HUMAN items live here | any agent |
+| Blocked | Stuck on a decision; NEEDS HUMAN items live here | any agent |
+| Waiting on someone | Waiting on another person's reply or work; Follow up holds the nudge date | any agent |
 
 Cockpit Reject sets the task back to **In progress** so the agent revises it.
 
@@ -44,6 +45,14 @@ Every SOP run writes one row per source item it handled: Name (title), Source (G
 - Client sub-account IDs are in each `clients/<slug>/CLAUDE.md`.
 
 ## Rules
+- **Tiers decide what runs on its own.**
+  - **T0 Autonomous:** internal notes (including an internal note on a client's platform record), research, filing, and Notion updates. These run and are logged on the task, with no review.
+  - **T1 Plan approval:** client-account builds (fields, tags, stages, forms, calendars, pipelines) and Gmail drafts. A build runs only after Vinny sets the task Approved. A draft is created, never sent, and the task goes to Needs your review.
+  - **T2 Explicit yes:** anything sent, published, or touching money, billing or payments (also deletes, invites to external guests, credentials, a client's live build). Never automatic: Vinny says yes to the specific item.
+  - Pick the lowest tier that covers every step of the task. Unsure → the higher tier.
+- **Every task needs a date:** set Due (only from a stated or approved date), or tick No date. The mod refuses a new task with neither. The morning brief proposes dates for undated tasks and marks each one "suggested"; it never invents a deadline.
+- **Waiting on someone:** for anything blocked on another person. Set Follow up (the date they promised, or 7 days out). On that day the morning brief drafts a nudge.
+- **Rollovers** counts how many times a calendar block for the task was missed. **Outcome** records Vinny's verdict on a review item: Approved as-is, Edited, Rejected.
 - Creating and updating Notion tasks and ledger rows is T0 (reversible). Never send, publish, invite, or change billing, payments or credentials as part of tracking.
 - Never write secrets into a task. If one was shared, create a task "Rotate exposed <credential> — <Client>" without the value.
 - If Notion is unreachable: finish the work, retry at most 2 times, then list in the Tracking line what still needs logging.

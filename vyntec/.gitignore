@@ -3,8 +3,10 @@
 .env.*
 *.pem
 *.key
-*token*
-*secret*
+*token*.json
+*.token
+*secret*.json
+*.secret
 credentials*.json
 .mcp.json
 # Runtime team state
