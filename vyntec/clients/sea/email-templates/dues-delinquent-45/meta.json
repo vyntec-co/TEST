@@ -1,0 +1,14 @@
+{
+  "name": "Dues: Delinquent (45+ Days)",
+  "subject": "Important: your SEA membership is at risk",
+  "preheader": "Please contact us about your dues.",
+  "sent_by": "unknown",
+  "merge_fields": [
+    "{{ custom_values.sea_main_line }}",
+    "{{contact.first_name}}",
+    "{{email.unsubscribe_link}}",
+    "{{location.full_address}}"
+  ],
+  "source": "SEA sub-account email template 'DRAFT – Dues: Delinquent (45+ Days)' (id 6ac77e5cf94e3d0736d586c1, DRAFT, created 2026-10-08, read via list/get-email-template on 2026-10-10); gaps filled from SEA custom fields/values and SEA Deployment Plan (Google Doc 1BwGI1yl1PT1a083XHVgJ_tYJ7HNNDvxtgPrI_Ir8rlU, Oct 8 2026)",
+  "status": "draft"
+}

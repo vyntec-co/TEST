@@ -1,0 +1,16 @@
+{
+  "name": "Engagement: Points Earned",
+  "subject": "You just earned engagement points, {{contact.first_name}}",
+  "preheader": "Thank you for showing up for your colleagues.",
+  "sent_by": "unknown",
+  "merge_fields": [
+    "{{contact.engagement_points}}",
+    "{{contact.engagement}}",
+    "{{contact.first_name}}",
+    "{{contact.worksite_name}}",
+    "{{email.unsubscribe_link}}",
+    "{{location.full_address}}"
+  ],
+  "source": "SEA sub-account email template 'DRAFT – Engagement: Points Earned' (id 6ac77e359ed784b5df1e8659, DRAFT, created 2026-10-08, read via list/get-email-template on 2026-10-10); gaps filled from SEA custom fields/values and SEA Deployment Plan (Google Doc 1BwGI1yl1PT1a083XHVgJ_tYJ7HNNDvxtgPrI_Ir8rlU, Oct 8 2026)",
+  "status": "draft"
+}

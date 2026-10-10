@@ -1,0 +1,14 @@
+{
+  "name": "Dues: Past Due (30+ Days)",
+  "subject": "Your SEA dues are past due",
+  "preheader": "Let's get your membership back on track.",
+  "sent_by": "unknown",
+  "merge_fields": [
+    "{{ custom_values.sea_main_line }}",
+    "{{contact.first_name}}",
+    "{{email.unsubscribe_link}}",
+    "{{location.full_address}}"
+  ],
+  "source": "SEA sub-account email template 'DRAFT – Dues: Past Due (30+ Days)' (id 6ac77e5887cdcc5d6e935195, DRAFT, created 2026-10-08, read via list/get-email-template on 2026-10-10); gaps filled from SEA custom fields/values and SEA Deployment Plan (Google Doc 1BwGI1yl1PT1a083XHVgJ_tYJ7HNNDvxtgPrI_Ir8rlU, Oct 8 2026)",
+  "status": "draft"
+}

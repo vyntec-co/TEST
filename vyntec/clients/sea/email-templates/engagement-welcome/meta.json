@@ -1,0 +1,15 @@
+{
+  "name": "Engagement: Welcome to the Engagement Program",
+  "subject": "Welcome, {{contact.first_name}}: here's how SEA engagement works",
+  "preheader": "Your involvement counts, and we keep track.",
+  "sent_by": "unknown",
+  "merge_fields": [
+    "{{contact.engagement_points}}",
+    "{{contact.first_name}}",
+    "{{contact.worksite_name}}",
+    "{{email.unsubscribe_link}}",
+    "{{location.full_address}}"
+  ],
+  "source": "SEA sub-account email template 'DRAFT – Engagement: Welcome to the Engagement Program' (id 6ac77e3f9ed784b5df1e876a, DRAFT, created 2026-10-08, read via list/get-email-template on 2026-10-10); gaps filled from SEA custom fields/values and SEA Deployment Plan (Google Doc 1BwGI1yl1PT1a083XHVgJ_tYJ7HNNDvxtgPrI_Ir8rlU, Oct 8 2026)",
+  "status": "draft"
+}

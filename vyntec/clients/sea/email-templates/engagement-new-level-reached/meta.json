@@ -1,0 +1,15 @@
+{
+  "name": "Engagement: New Level Reached",
+  "subject": "You've reached {{contact.engagement}} status",
+  "preheader": "A milestone worth celebrating.",
+  "sent_by": "unknown",
+  "merge_fields": [
+    "{{contact.engagement_points}}",
+    "{{contact.engagement}}",
+    "{{contact.first_name}}",
+    "{{email.unsubscribe_link}}",
+    "{{location.full_address}}"
+  ],
+  "source": "SEA sub-account email template 'DRAFT – Engagement: New Level Reached' (id 6ac77e3b1cdda3621d1b1eca, DRAFT, created 2026-10-08, read via list/get-email-template on 2026-10-10); gaps filled from SEA custom fields/values and SEA Deployment Plan (Google Doc 1BwGI1yl1PT1a083XHVgJ_tYJ7HNNDvxtgPrI_Ir8rlU, Oct 8 2026)",
+  "status": "draft"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Committee: Meeting Reminder",
+  "subject": "Reminder: your SEA committee meets [[MEETING DATE]]",
+  "preheader": "We hope to see you there.",
+  "sent_by": "unknown",
+  "merge_fields": [
+    "{{contact.first_name}}",
+    "{{email.unsubscribe_link}}",
+    "{{location.full_address}}"
+  ],
+  "source": "SEA sub-account email template 'DRAFT – Committee: Meeting Reminder' (id 6ac77e4a1cdda3621d1b204b, DRAFT, created 2026-10-08, read via list/get-email-template on 2026-10-10); gaps filled from SEA custom fields/values and SEA Deployment Plan (Google Doc 1BwGI1yl1PT1a083XHVgJ_tYJ7HNNDvxtgPrI_Ir8rlU, Oct 8 2026)",
+  "status": "draft"
+}
