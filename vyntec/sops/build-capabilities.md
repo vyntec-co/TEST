@@ -118,7 +118,14 @@ All write and delete operations below report `requiresApproval: true` and `idemp
 
 ## Pilot results
 
-(Filled in as pilots run in the Test Lab.)
+| Pilot | Task | Route | Status (2026-10-10) |
+|---|---|---|---|
+| API: Pilot Field + tag "pilot" on contact "Pilot Test", read back, undo | VT-867 | API | NOT RUN: waiting for Vinny to set VT-867 Approved |
+| Blog draft "New custom field types": place as DRAFT, read back, archive | Review: Blog draft pilot | API | NOT RUN: package and private preview ready; needs VT approval plus Vinny's yes to a DRAFT-only exception for create-blog-post/update-blog-post (blocked in the mod) |
+| Page /pilot: place unpublished, check, delete | Review: Page package pilot /pilot | Browser → Human only | Click path written in the task; Vinny runs it (no signed-in browser session here) |
+| Domain connection | — | Human only | Step list below |
+| Waiting loop | VT-3 (dry run), Waiting: Pilot reply | Notion | PASS (see below) |
+All capability rows stay INFERRED until a pilot moves them to REAL.
 
 ## Domain connection (Human only): step list
 Click path INFERRED (not run from this install; confirm on first use). No API op covers domain connection, and it touches DNS at the client's registrar (credentials Vinny or the client holds). Steps for Vinny:
