@@ -2,7 +2,7 @@
 name: forms-consent-engineer
 description: Use for a client's intake, consent, waiver and health forms and the workflows that send them. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Forms & Consent Engineer (was role 21 Consent Packet Engineer)

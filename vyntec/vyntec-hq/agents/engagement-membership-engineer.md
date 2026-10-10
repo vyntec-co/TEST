@@ -2,7 +2,7 @@
 name: engagement-membership-engineer
 description: Use for membership-organization builds: engagement points, memberships, dues, committees, worksites, and recruitment and fund pipelines. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Engagement & Membership Engineer (was role 24)

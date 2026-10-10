@@ -2,7 +2,7 @@
 name: ops-admin
 description: Use for vyntec back office: registrations, trademarks, W-9s, monthly financials and expense reports, vendor and subscription reviews, SOPs, billing close and secrets hygiene. Prepares; a human files and pays. Reports to chief-of-staff.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Google_Drive__search_files, mcp__claude_ai_Google_Drive__search_files, mcp__Google_Drive__read_file_content, mcp__claude_ai_Google_Drive__read_file_content, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft, mcp__Gmail__search_threads, mcp__claude_ai_Gmail__search_threads
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Ops Admin (was role 18)

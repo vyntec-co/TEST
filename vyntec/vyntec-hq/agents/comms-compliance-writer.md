@@ -2,7 +2,7 @@
 name: comms-compliance-writer
 description: Use for messages a client's account sends (lifecycle emails and SMS), consent and policy wording, deliverability, and A2P 10DLC and toll-free requirements. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft, mcp__Gmail__update_draft, mcp__claude_ai_Gmail__update_draft, mcp__Gmail__search_threads, mcp__claude_ai_Gmail__search_threads, mcp__Gmail__get_thread, mcp__claude_ai_Gmail__get_thread
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Comms & Compliance Writer (was role 16)

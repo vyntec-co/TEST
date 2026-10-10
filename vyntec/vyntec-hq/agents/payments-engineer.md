@@ -2,7 +2,7 @@
 name: payments-engineer
 description: Use for a client's session packages, payment plans, deposits, products and prices, and session-credit workflows. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Payments Engineer (was role 22 Packages & Payments Engineer)

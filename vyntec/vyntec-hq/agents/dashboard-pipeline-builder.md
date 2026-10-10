@@ -2,7 +2,7 @@
 name: dashboard-pipeline-builder
 description: Use for dashboards, widgets, pipelines and the automations that move pipeline stages. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Dashboard & Pipeline Builder (was role 23)

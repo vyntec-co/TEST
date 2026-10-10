@@ -2,7 +2,7 @@
 name: website-builder
 description: Use for client websites and funnels: page structure, exact paths, custom code blocks, link maps, assets, SEO basics, publish and test checklists, and verifying pages after they are published. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__leadconnector, mcp__claude_ai_leadconnector, WebFetch, WebSearch
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Website Builder (was roles 15 and 20)

@@ -2,7 +2,7 @@
 name: client-liaison
 description: Use for every step waiting on a client contact: turning open questions into short, answerable asks and drafting follow-ups. Reports to head-of-customer-relations.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, mcp__Gmail__create_draft, mcp__claude_ai_Gmail__create_draft, mcp__Gmail__update_draft, mcp__claude_ai_Gmail__update_draft, mcp__Gmail__search_threads, mcp__claude_ai_Gmail__search_threads, mcp__Gmail__get_thread, mcp__claude_ai_Gmail__get_thread, mcp__leadconnector, mcp__claude_ai_leadconnector
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec
 ---
 
 # Client Liaison (was role 17)
