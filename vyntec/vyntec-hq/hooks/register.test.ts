@@ -7,19 +7,33 @@ const DRAFT = 'mcp__Gmail__create_draft'
 
 // The test's own hooks stand for the connectors: answer every tool the mod lets through.
 // approvedRows: an Approved task exists. t0Rows: an open T0 task exists (answers the tier query only).
-const connectors = (on, approvedRows: boolean, t0Rows = false) => {
+// opts.goLive: an Approved "Go live:" item exists. opts.ghl: the platform's answer text.
+const connectors = (on, approvedRows: boolean, t0Rows = false, opts: { goLive?: boolean; ghl?: string } = {}) => {
   const row = '[{"url":"https://www.notion.so/abc123def4567890abc123def4567890"}]'
-  on('tool.call', { tool: NOTION_QUERY }, ($, e) => ({
-    result: [{ type: 'text', text: ((e as never as { data: { params: string[] } }).data.params[0] === 'T0 Autonomous' ? t0Rows : approvedRows) ? row : '[]' }],
-  }))
+  on('tool.call', { tool: NOTION_QUERY }, ($, e) => {
+    const d = (e as never as { data: { params: string[]; query: string } }).data
+    const hit = /Go live/.test(d.query) ? opts.goLive : d.params[0] === 'T0 Autonomous' ? t0Rows : approvedRows
+    return { result: [{ type: 'text', text: hit ? row : '[]' }] }
+  })
   on('tool.call', { tool: 'mcp__Notion__notion-update-page' }, () => ({ result: [{ type: 'text', text: 'updated' }] }))
   on('tool.call', { tool: 'mcp__Notion__notion-create-pages' }, () => ({ result: [{ type: 'text', text: 'created' }] }))
-  on('tool.call', { tool: GHL }, () => ({ result: [{ type: 'text', text: 'created' }] }))
+  on('tool.call', { tool: GHL }, () => ({ result: [{ type: 'text', text: opts.ghl ?? 'created' }] }))
   on('tool.call', { tool: DRAFT }, () => ({ result: [{ type: 'text', text: 'draft saved' }] }))
 }
 // The kit has no disk: answer the client file read with its real opening lines.
 const CS_LASER = '# Client: CS Laser Orlando (slug: cs-laser)\n\n- leadconnector location ID: `MnKKwFSetGRCrkXj7pBU` ("CS Laser Orlando"). Notion Client value: `CS Laser`.\n'
 const CS_LOC = 'MnKKwFSetGRCrkXj7pBU'
+const TEST_LAB = '# Client: vyntec Test Lab (slug: test-lab)\n\n- leadconnector location ID: `orGC5WISXbnF64QlfjXV` ("Enterprise Demo Test"). Notion Client value: `vyntec Test Lab`.\n'
+const LAB_LOC = 'orGC5WISXbnF64QlfjXV'
+const labFile = (on, files: Record<string, string> = {}) => {
+  on('fs.exists', () => ({ value: true }))
+  on('fs.read', ($, e, next) => {
+    if (/clients\/test-lab\/CLAUDE\.md$/.test(e.path)) return { value: TEST_LAB }
+    if (/clients\/cs-laser\/CLAUDE\.md$/.test(e.path)) return { value: CS_LASER }
+    for (const [k, v] of Object.entries(files)) if (e.path.endsWith(k)) return { value: v }
+    return next(e)
+  })
+}
 const clientFile = on => {
   on('fs.exists', () => ({ value: true }))
   on('fs.read', ($, e, next) => (/clients\/cs-laser\/CLAUDE\.md$/.test(e.path) ? { value: CS_LASER } : next(e)))
@@ -49,19 +63,19 @@ test('a draft without the vendor name passes', async ($, on) => {
 
 test('a platform write is refused without an Approved task', async ($, on) => {
   connectors(on, false)
-  clientFile(on)
-  const set = await $.command.run({ command: 'client', args: 'cs-laser' })
-  expect(set.text).toMatch(/CS Laser/)
-  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'Call recap' } } as never)
+  labFile(on)
+  const set = await $.command.run({ command: 'client', args: 'test-lab' })
+  expect(set.text).toMatch(/Test Lab/)
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: LAB_LOC, reason: 'VT-900 pilot note', params: { contactId: 'c1', body: 'Call recap' } } as never)
   expect(refused(r)).toBe(true)
   expect(reason(r)).toMatch(/Approved/)
 })
 
 test('a platform write is allowed with an Approved task', async ($, on) => {
   connectors(on, true)
-  clientFile(on)
-  await $.command.run({ command: 'client', args: 'cs-laser' })
-  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'Call recap' } } as never)
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: LAB_LOC, reason: 'VT-900 pilot note', params: { contactId: 'c1', body: 'Call recap' } } as never)
   expect(refused(r)).toBe(false)
 })
 
@@ -312,17 +326,17 @@ test('a T0 Notion update runs with no approval', async ($, on) => {
 
 test('a T0 internal note on the platform runs under an open T0 task without Approved', async ($, on) => {
   connectors(on, false, true)
-  clientFile(on)
-  await $.command.run({ command: 'client', args: 'cs-laser' })
-  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, params: { contactId: 'c1', body: 'Research notes' } } as never)
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: LAB_LOC, reason: 'VT-900 research notes', params: { contactId: 'c1', body: 'Research notes' } } as never)
   expect(refused(r)).toBe(false)
 })
 
 test('a T1 client build is refused unless Approved, even with an open T0 task', async ($, on) => {
   connectors(on, false, true)
-  clientFile(on)
-  await $.command.run({ command: 'client', args: 'cs-laser' })
-  const r = await $.tool.call({ tool: GHL, operationId: 'create-custom-field-folder', locationId: CS_LOC, params: { name: 'Packages' } } as never)
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-custom-field-folder', locationId: LAB_LOC, reason: 'VT-900 folder', params: { name: 'Packages' } } as never)
   expect(reason(r)).toMatch(/Approved/)
 })
 
@@ -342,3 +356,88 @@ test('a new task with no Due and No date unticked is refused, with a reason', as
   expect(refused(ok1) || refused(ok2)).toBe(false)
 })
 
+
+// --- phase 4: client-account rails ---
+test('a client-location write is refused in this phase, even with an Approved task', async ($, on) => {
+  connectors(on, true)
+  clientFile(on)
+  await $.command.run({ command: 'client', args: 'cs-laser' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: CS_LOC, reason: 'VT-900 note', params: { contactId: 'c1', body: 'x' } } as never)
+  expect(reason(r)).toMatch(/read only in this phase/)
+})
+
+test('a Test Lab write must name its VT task', async ($, on) => {
+  connectors(on, true)
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-tag', locationId: LAB_LOC, params: { name: 'pilot' } } as never)
+  expect(reason(r)).toMatch(/name the vyntec Tasks entry/)
+})
+
+test('a bulk write without a backup is refused', async ($, on) => {
+  connectors(on, true)
+  labFile(on)
+  on('fs.list', () => ({ value: [] }))
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const contacts = Array.from({ length: 10 }, (_, i) => ({ email: `p${i}@example.com` }))
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-note', locationId: LAB_LOC, reason: 'VT-900 bulk', params: { body: { contacts } } } as never)
+  expect(reason(r)).toMatch(/Save a backup first as clients\/test-lab\/backups\/VT-900/)
+})
+
+test('go-live or publishing without a T2 yes is refused', async ($, on) => {
+  connectors(on, true)
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'update-custom-value', locationId: LAB_LOC, reason: 'VT-900 go live', params: { body: { status: 'PUBLISHED' } } } as never)
+  expect(reason(r)).toMatch(/go-live gate/)
+  for (const op of ['create-blog-post', 'create-post', 'add-contact-to-workflow', 'create-redirect']) {
+    const g = await $.tool.call({ tool: GHL, operationId: op, locationId: LAB_LOC, reason: 'VT-900 go live', params: { body: { status: 'PUBLISHED' } } } as never)
+    expect(refused(g)).toBe(true)
+  }
+})
+
+test('a second session writing while another holds the lock waits', async ($, on) => {
+  connectors(on, true)
+  labFile(on, { 'locks/orGC5WISXbnF64QlfjXV.json': JSON.stringify({ sessionId: 'other', role: 'delivery', at: Date.now() - 60e3 }) })
+  on('session.id', () => ({ value: 'me' }))
+  on('session.root', () => ({ value: '/home/v/vyntec' }))
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-tag', locationId: LAB_LOC, reason: 'VT-900 tag', params: { name: 'pilot' } } as never)
+  expect(reason(r)).toMatch(/vyntec lock: the delivery session holds the lock/)
+})
+
+test('every allowed Test Lab write is appended to the change log with an undo step', async ($, on) => {
+  connectors(on, true, false, { ghl: '{"tag":{"id":"tag123","name":"pilot"}}' })
+  labFile(on)
+  const writes: Record<string, string> = {}
+  on('fs.write', ($, e) => { writes[e.path] = e.text; return { value: undefined } })
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-tag', locationId: LAB_LOC, reason: 'VT-900 add pilot tag', params: { name: 'pilot' } } as never)
+  expect(refused(r)).toBe(false)
+  const log = Object.entries(writes).find(([k]) => k.endsWith('clients/test-lab/changelog.md'))?.[1] ?? ''
+  expect(log).toMatch(/\| VT-900 \| create-tag \| .*pilot.* \| delete-tag tag123 \|/)
+})
+
+test('Done without a QA PASS is refused on a client task', async ($, on) => {
+  connectors(on, false)
+  on('tool.list', () => ({ value: [] }))
+  on('mcp.call', ($, e) => ({ value: { content: [{ type: 'text', text: JSON.stringify({ text: '<properties>{"Client":"CS Laser","QA":null,"Evidence":""}</properties>' }) }], isError: false } }))
+  const r = await $.tool.call({ tool: 'mcp__Notion__notion-update-page', page_id: 'abc', command: 'update_properties', properties: { Status: 'Done' } } as never)
+  expect(reason(r)).toMatch(/done gate: .* no QA Lead PASS/)
+  const ok = await $.tool.call({ tool: 'mcp__Notion__notion-update-page', page_id: 'abc', command: 'update_properties', properties: { Status: 'Done', QA: 'PASS', Evidence: 'Read back tag pilot on contact Pilot Test' } } as never)
+  expect(refused(ok)).toBe(false)
+})
+
+test('placing an asset missing from the register is refused', async ($, on) => {
+  connectors(on, true)
+  labFile(on, { 'clients/test-lab/assets.md': '| ID | Type | File | Source | Owner | Usage rights | Approved by | Used on |\n|---|---|---|---|---|---|---|---|\n| A1 | image | logo.png | client | vyntec | owned | Vinny 2026-10-10 | - |\n' })
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'upload-media-content', locationId: LAB_LOC, reason: 'VT-900 upload', params: { body: { name: 'hero.jpg' } } } as never)
+  expect(reason(r)).toMatch(/(asset guard|unknown operation ID)/)
+})
+
+test('image or video generation is refused while the budget is 0', async ($, on) => {
+  connectors(on, true)
+  const r = await $.tool.call({ tool: 'mcp__Higgsfield__generate_image', prompt: 'truck' } as never)
+  expect(refused(r)).toBe(true)
+})

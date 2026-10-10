@@ -18,6 +18,23 @@ export const TEAM = {
   approvalPollMinutes: 5,     // how often the chief checks vyntec Tasks for newly Approved tasks to route
 }
 
+// Phase 4 rails for client accounts. Client sub-accounts are read only; agents write only where listed here.
+export const WRITABLE = { orGC5WISXbnF64QlfjXV: 'test-lab' } // locationId → clients/<slug>
+export const BUILD = {
+  bulkMin: 10,                 // a write touching this many records needs clients/<slug>/backups/<VT-n>* first
+  lockIdleMinutes: 30,         // a client lock frees itself after this long without a write
+  // Switching something on for real people: a separate T2 yes ("Go live: <what> — <client>", Approved).
+  goLiveOps: ['add-contact-to-workflow', 'create-redirect', 'create-blog-post', 'update-blog-post', 'create-post', 'edit-post'],
+  placeOps: ['upload-media-content'], // placing an asset needs a row with rights in clients/<slug>/assets.md
+  undo: {                      // operation → how to undo it (the created record's id is added when the response has one)
+    'create-contact': 'delete-contact', 'upsert-contact': 'delete-contact (if it was created)', 'update-contact': 'update-contact with the values in the backup',
+    'create-tag': 'delete-tag', 'add-tags': 'remove-tags (same tags)', 'remove-tags': 'add-tags (same tags)',
+    'locations.create-custom-field': 'locations.delete-custom-field', 'create-custom-value': 'delete-custom-value',
+    'create-note': 'delete-note', 'create-opportunity': 'delete-opportunity', 'upload-media-content': 'delete-media-content',
+    'create-blog-post': 'update-blog-post status ARCHIVED', 'create-post': 'delete-post', 'create-calendar': 'delete-calendar',
+  },
+}
+
 // leadconnector operations by ID, from search_operations/describe_operation. Classes:
 //   read    → allowed (still refused when aimed at a location other than the active client's)
 //   write   → allowed only for the active client's location and only while it has an Approved task
@@ -625,7 +642,19 @@ function judgeGhl(e, active) {
   if (!active) return { deny: `vyntec platform guard: "${op}" is a write and no client is active. Run /client <slug>, and have Vinny approve the task first.` }
   if (loc !== active.locationId) return { deny: `vyntec platform guard: "${op}" is a write; pass locationId ${active.locationId} (${active.name}) explicitly.` }
   if (VENDOR.test(JSON.stringify(e.params ?? {}))) return { deny: 'vyntec white-label guard: this platform write names the underlying vendor. Rewrite it as "the platform" / link.vyntec.co / Union OS.' }
-  return { needsApproved: true, isT0: T0_OPS.has(op) }
+  if (!Object.hasOwn(WRITABLE, loc)) return { deny: `vyntec platform guard: ${active.name} (${loc}) is read only in this phase. Build it in the vyntec Test Lab first; a proven build is promoted by Vinny.` }
+  const task = /\bVT-\d+\b/.exec(String(e.reason ?? ''))?.[0]
+  if (!task) return { deny: `vyntec platform guard: name the vyntec Tasks entry in "reason" (e.g. "VT-123 add pilot tag") so the change log can link it.` }
+  const goLive = BUILD.goLiveOps.includes(op) || /"status"\s*:\s*"(published|scheduled|active)"/i.test(JSON.stringify(e.params ?? {}))
+  return { needsApproved: true, isT0: T0_OPS.has(op), op, task, slug: WRITABLE[loc], loc, goLive, bulk: recordCount(e.params) >= BUILD.bulkMin, place: BUILD.placeOps.includes(op) }
+}
+
+// The largest list of records in a write's params (a bulk write), or 1.
+export function recordCount(params) {
+  let max = 1
+  const walk = v => { if (Array.isArray(v)) { max = Math.max(max, v.length); v.forEach(walk) } else if (v && typeof v === 'object') Object.values(v).forEach(walk) }
+  walk(params ?? {})
+  return max
 }
 
 // T0 platform writes: internal notes on a record. They run under an open T0 task, no Approved status needed.
@@ -642,6 +671,7 @@ export function judge(e, active = null) {
     if (/gmail/i.test(tool) && /^(create|update)_draft$/.test(verb)) {
       return VENDOR.test(JSON.stringify(e)) ? { deny: 'vyntec white-label guard: this Gmail draft names the underlying vendor. Rewrite it before saving.' } : null
     }
+    if (/notion/i.test(tool) && verb === 'notion-update-page' && e.properties?.Status === 'Done') return { doneCheck: { page_id: String(e.page_id ?? ''), props: e.properties } }
     if (/notion/i.test(tool) && /^notion-(update-page|create-pages)$/.test(verb) && /"Status"\s*:\s*"Approved"/.test(JSON.stringify(e))) {
       return { deny: 'vyntec approval guard: only Vinny sets a task to Approved (cockpit Approve button or Notion). Put it in Needs your review.' }
     }
@@ -689,6 +719,84 @@ export async function hasOpenT0Task($, notionClient) {
   })
   if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion query failed')
   return /notion\.(so|com)\//.test(toText(ran))
+}
+
+// Definition of done: a client task reaches Done only with QA PASS and evidence (and the client's approval when needed).
+export function doneProblem(p) {
+  if (!p.Client || p.Client === 'vyntec internal') return null
+  if (p.QA !== 'PASS') return 'it has no QA Lead PASS (set QA to PASS after qa-lead\'s check)'
+  if (!String(p.Evidence ?? '').trim()) return 'it has no Evidence (test contact results, a live URL check, or matching numbers)'
+  if (p['Needs client approval'] === '__YES__' && !String(p['Client approval'] ?? '').trim()) return 'the client must approve and Client approval is empty (quote and date, or a link to the message)'
+  return null
+}
+
+async function pageProps($, page_id) {
+  const r = await notion($, 'notion-fetch', { id: page_id })
+  const text = r.content.map(b => b.text ?? '').join('')
+  const json = /<properties>\s*([\s\S]*?)\s*<\/properties>/.exec(JSON.parse(text).text ?? text)?.[1]
+  return json ? JSON.parse(json) : {}
+}
+
+// One agent changes a client account at a time. The lock is a file per location; a stale lock frees itself.
+// shortcut: lock files live on this machine's disk, upgrade to a Notion or store-backed lock if sessions run on several machines
+const nowMs = $ => $.clock.now().catch(() => Date.now())
+const lockPath = async ($, loc) => `${await teamDir($)}/locks/${loc}.json`
+export async function takeLock($, loc) {
+  const me = { sessionId: await $.session.id().catch(() => 'unknown'), role: (await teamRole($).catch(() => null)) ?? 'session', at: await nowMs($) }
+  let held = null
+  try { held = JSON.parse(await $.fs.read(await lockPath($, loc))) } catch {}
+  if (held && held.sessionId !== me.sessionId && me.at - held.at < BUILD.lockIdleMinutes * 60e3) {
+    return `the ${held.role} session holds the lock for this account since ${new Date(held.at).toISOString().slice(11, 16)}Z (released after ${BUILD.lockIdleMinutes} minutes without a write). Wait for it, or ask chief-of-staff.`
+  }
+  try { await $.fs.write(await lockPath($, loc), JSON.stringify(me)) } catch {}
+  return null
+}
+async function releaseLocks($) {
+  const sid = await $.session.id().catch(() => null)
+  try {
+    for (const f of await $.fs.list(`${await teamDir($)}/locks`)) {
+      const path = `${await teamDir($)}/locks/${f.name}`
+      try { if (JSON.parse(await $.fs.read(path)).sessionId === sid) await $.fs.write(path, '{}') } catch {}
+    }
+  } catch {}
+}
+
+async function hasBackup($, slug, task) {
+  try { return (await $.fs.list(`${await vyntecRoot($)}/clients/${slug}/backups`)).some(f => f.name.startsWith(task)) } catch { return false }
+}
+
+async function hasApprovedGoLive($, notionClient) {
+  const ran = await $.tool.call({
+    tool: await resolveTool($, NOTION_QUERY),
+    data: { mode: 'sql', data_source_urls: [TASKS_DS], query: `SELECT url FROM "${TASKS_DS}" WHERE "Status" = ? AND "Client" = ? AND "Name" LIKE 'Go live:%' LIMIT 1`, params: ['Approved', notionClient] },
+  })
+  if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion query failed')
+  return /notion\.(so|com)\//.test(toText(ran))
+}
+
+// Asset register: a placed file must have a row in clients/<slug>/assets.md with its usage rights filled in.
+export function assetRegistered(register, params) {
+  const names = [params?.body?.name, params?.body?.fileUrl, params?.body?.url, params?.name, params?.fileUrl, params?.url].filter(Boolean).map(String)
+  if (!names.length) return false
+  return String(register).split('\n').some(row => {
+    const cells = row.split('|').map(c => c.trim())
+    return names.some(n => row.includes(n)) && cells.length > 7 && cells[6] && !/^(|-|\?|tbd)$/i.test(cells[6])
+  })
+}
+
+async function logChange($, v, e, ran) {
+  const text = toText(ran)
+  const id = /"(?:id|_id|tagId|contactId|postId|fileId)"\s*:\s*"([^"]+)"/.exec(text)?.[1]
+  const undo = `${BUILD.undo[v.op] ?? 'manual: reverse ' + v.op + ' (see params)'}${id ? ` ${id}` : ''}`
+  const when = new Date(await nowMs($)).toISOString().slice(0, 16).replace('T', ' ') + 'Z'
+  const who = (await teamRole($).catch(() => null)) ?? (e.agentId ? `subagent ${e.agentId}` : 'session')
+  const what = JSON.stringify(e.params ?? {}).slice(0, 300).replace(/\|/g, '/')
+  const path = `${await vyntecRoot($)}/clients/${v.slug}/changelog.md`
+  let prev = '# Change log\n\nEvery leadconnector write the mod let through, newest last. Undo = how to reverse it.\n\n| Time | Agent | Task | Operation | What changed | Undo |\n|---|---|---|---|---|---|\n'
+  try { prev = await $.fs.read(path) } catch {}
+  try { await $.fs.write(path, `${prev}| ${when} | ${who} | ${v.task} | ${v.op} | ${what} | ${undo} |\n`) } catch (err) {
+    $.ui.status(`vyntec change log: could not write ${path} (${String(err?.message ?? err).slice(0, 80)}). Record this write by hand.`)
+  }
 }
 
 export function parseClient(slug, text) {
@@ -1093,12 +1201,28 @@ export async function teamRows($) {
   return rows
 }
 
-export function teamText(rows, recent) {
+export async function lockRows($) {
+  const out = []
+  try {
+    const now = await nowMs($)
+    for (const f of await $.fs.list(`${await teamDir($)}/locks`)) {
+      try {
+        const l = JSON.parse(await $.fs.read(`${await teamDir($)}/locks/${f.name}`))
+        if (l.sessionId && now - l.at < BUILD.lockIdleMinutes * 60e3) out.push({ loc: f.name.replace(/\.json$/, ''), role: l.role, since: new Date(l.at).toISOString().slice(11, 16) + 'Z' })
+      } catch {}
+    }
+  } catch {}
+  return out
+}
+
+export function teamText(rows, recent, locks = []) {
   const pad = (v, n) => String(v).padEnd(n)
   return [
     'vyntec team:',
     `  ${pad('session', 19)}${pad('model', 7)}${pad('status', 8)}${pad('task', 7)}${pad('last msg', 9)}usage since start`,
     ...rows.map(r => `  ${pad(r.name, 19)}${pad(r.model, 7)}${pad(r.status, 8)}${pad(r.task, 7)}${pad(r.last, 9)}${r.usage}`),
+    `Client locks (${locks.length}):`,
+    ...locks.map(l => `  ${WRITABLE[l.loc] ?? l.loc} — held by ${l.role} since ${l.since}`),
     `Recent hand-offs (${recent.length}):`,
     ...recent.map(x => `  ${x.time} ${x.line}${x.note ? ` · ${x.note}` : ''}${x.url ? ` · ${x.url}` : ''}`),
   ].join('\n')
@@ -1113,11 +1237,37 @@ export const register = on => {
     const verdict = judge(e, active)
     if (verdict === null) return next(e)
     if (verdict.deny) return { deny: verdict.deny }
+    if (verdict.doneCheck) {
+      let props
+      try { props = { ...(await pageProps($, verdict.doneCheck.page_id)), ...verdict.doneCheck.props } } catch (err) {
+        return { deny: `vyntec done gate: could not read the task to check QA (${String(err?.message ?? err).slice(0, 100)}). Not marking Done.` }
+      }
+      const why = doneProblem(props)
+      return why ? { deny: `vyntec done gate: this client task can't move to Done: ${why}.` } : next(e)
+    }
+    const waiting = await takeLock($, verdict.loc)
+    if (waiting) return { deny: `vyntec lock: ${waiting}` }
+    if (verdict.bulk && !(await hasBackup($, verdict.slug, verdict.task))) {
+      return { deny: `vyntec bulk guard: this write touches ${BUILD.bulkMin}+ records. Save a backup first as clients/${verdict.slug}/backups/${verdict.task}-<what>.json, then retry.` }
+    }
+    if (verdict.place) {
+      let register = ''
+      try { register = await $.fs.read(`${await vyntecRoot($)}/clients/${verdict.slug}/assets.md`) } catch {}
+      if (!assetRegistered(register, e.params)) return { deny: `vyntec asset guard: add this file to clients/${verdict.slug}/assets.md (ID, type, file, source, usage rights, approved by) before placing it.` }
+    }
+    if (verdict.goLive) {
+      let yes = false
+      try { yes = await hasApprovedGoLive($, active.notionClient) } catch {}
+      if (!yes) return { deny: `vyntec go-live gate: "${verdict.op}" switches something on for real people. It needs its own review item "Go live: <what> — ${active.name}" with Vinny's explicit yes (Approved).` }
+    }
     let ok = false
     try { ok = await hasApprovedTask($, active.notionClient) || (verdict.isT0 && await hasOpenT0Task($, active.notionClient)) } catch (err) {
       return { deny: `vyntec platform guard: could not check Notion for an Approved task (${String(err?.message ?? err).slice(0, 120)}). Not writing.` }
     }
-    return ok ? next(e) : { deny: `vyntec platform guard: no vyntec Tasks entry for ${active.name} has status Approved${verdict.isT0 ? ' and none is an open T0 task' : ''}. Put the plan in Needs your review and wait for Vinny's approval.` }
+    if (!ok) return { deny: `vyntec platform guard: no vyntec Tasks entry for ${active.name} has status Approved${verdict.isT0 ? ' and none is an open T0 task' : ''}. Put the plan in Needs your review and wait for Vinny's approval.` }
+    const ran = await next(e)
+    if (!ran.isError && ran.deny === undefined) await logChange($, verdict, e, ran)
+    return ran
   }).catch(($, e, next) => {
     // Re-entry (a call made beneath this hook's own $ call): judge without awaiting anything.
     if (next.error?.kind === 're-entry') { const v = judge(e); return v === null ? next(e) : { deny: v.deny ?? 'vyntec guard: platform write refused during a nested call.' } }
@@ -1129,6 +1279,7 @@ export const register = on => {
     next.called ? next(e) : { isDelivered: false, reason: `vyntec team guard failed (${String(next.error?.message ?? next.error).slice(0, 120)}), so the message was not sent.` })
   on('session.receive', guardReceive).catch(($, e, next) =>
     next.called ? next(e) : { consumed: `vyntec team guard failed (${String(next.error?.message ?? next.error).slice(0, 120)}), so the message was held back.` })
+  on('session.end', async ($, e, next) => { await releaseLocks($); return next(e) })
   on('turn.start', async ($, e, next) => {
     const role = await teamRole($)
     if (role) await writeStatus($, role, { state: 'working', at: await $.clock.now() })
@@ -1192,13 +1343,14 @@ export const register = on => {
     if (arg) return { text: 'Usage: /team, /team up, /team down' }
     // Panes may not draw (headless runs), so the transcript always gets the text table too.
     await $.ui.open({ id: TEAM_PANE, title: 'vyntec cockpit · Team' })
-    return { text: teamText(await teamRows($), (await $.store.get('team.recent')) ?? []) }
+    return { text: teamText(await teamRows($), (await $.store.get('team.recent')) ?? [], await lockRows($)) }
   })
 
   on('ui.render', { component: 'Pane', requestId: TEAM_PANE }, async ($, e) => {
     const { Box, Text, Button, Link } = $.ui.resolve(e)
     const rows = await teamRows($)
     const recent = (await $.store.get('team.recent')) ?? []
+    const locks = await lockRows($)
     const color = { working: 'yellow', idle: 'green', offline: 'gray' }
     return h(Box, { flexDirection: 'column' },
       h(Text, { bold: true }, 'Team'),
@@ -1206,6 +1358,8 @@ export const register = on => {
         h(Text, null, r.name.padEnd(19)), h(Text, { dimColor: true }, r.model.padEnd(7)),
         h(Text, { color: color[r.status] }, r.status.padEnd(8)), h(Text, null, r.task.padEnd(7)),
         h(Text, { dimColor: true }, r.last.padEnd(7)), h(Text, null, r.usage))),
+      h(Text, { bold: true }, `Client locks (${locks.length})`),
+      ...locks.map(l => h(Text, { key: `lock:${l.loc}` }, `${WRITABLE[l.loc] ?? l.loc} — held by ${l.role} since ${l.since}`)),
       h(Text, { bold: true }, `Recent hand-offs (${recent.length})`),
       ...recent.map((x, i) => x.url
         ? h(Link, { key: `r${i}`, href: x.url, label: `${x.time} ${x.line}${x.note ? ` · ${x.note}` : ''}` })

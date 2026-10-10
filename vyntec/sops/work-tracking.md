@@ -56,3 +56,18 @@ Every SOP run writes one row per source item it handled: Name (title), Source (G
 - Creating and updating Notion tasks and ledger rows is T0 (reversible). Never send, publish, invite, or change billing, payments or credentials as part of tracking.
 - Never write secrets into a task. If one was shared, create a task "Rotate exposed <credential> — <Client>" without the value.
 - If Notion is unreachable: finish the work, retry at most 2 times, then list in the Tracking line what still needs logging.
+
+## Definition of done (client work)
+A client task (Client is not `vyntec internal`) is Done only when all of these hold. The mod refuses Status Done otherwise.
+- **QA = PASS**, set after qa-lead checked the work (`sops/qa-verification.md`).
+- **Evidence** says what proved it: test-contact results, a live URL check, or numbers that match the source.
+- **Client approval**, when **Needs client approval** is ticked: the client's words with the date, or a link to their message.
+
+## Account builds (phase 4)
+- **Read only outside the Test Lab.** Client sub-accounts take list/get/search calls only this phase. Writes run in the vyntec Test Lab (`clients/test-lab/CLAUDE.md`) first; see `sops/build-capabilities.md` for what is API, Browser or Human only.
+- **Name the task.** Every platform write puts its `VT-n` in `reason`. The mod appends a row to `clients/<slug>/changelog.md`: time, agent, task, operation, what changed, how to undo it.
+- **Bulk writes** (10 or more records) need a backup first: `clients/<slug>/backups/<VT-n>-<what>.json`, the records as they were.
+- **Assets:** a file is placed only if it has a row in `clients/<slug>/assets.md` with usage rights filled in.
+- **Go-live gate (T2):** switching something on for real people (a workflow enrollment, a redirect, a published blog or social post, anything set to published, scheduled or active) needs its own review item `Go live: <what> — <client>`, Approved by Vinny. Approval of the build task does not cover it.
+- **Gates:** a client file's Gates section lists open blockers (A2P, HIPAA, legal sign-off). Work that depends on an open gate goes to Blocked with `NEEDS HUMAN: <gate> — <who decides>`.
+- **One session per account:** the first write takes a lock on the account; another session waits until the lock is released (session end or 30 minutes with no write). The Team tab shows held locks.
