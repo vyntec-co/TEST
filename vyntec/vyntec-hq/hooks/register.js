@@ -897,6 +897,8 @@ async function onIdleNotice($, text) {
 export async function guardSend($, e, next) {
   const me = await teamRole($)
   if (!me || e.to === 'main') return next(e)
+  // A head talking to its own specialist subagents stays inside its session; only cross-session messages are guarded.
+  try { if ((await $.agent.list()).some(a => a.id === e.to || a.teammateId === e.to)) return next(e) } catch {}
   const refuse = why => { $.ui.status(`vyntec team: ${why}`); return { isDelivered: false, reason: `vyntec team guard: ${why}` } }
   const h = parseHeader(e.text)
   if (!h) return refuse('message refused: its first line must be "TASK VT-<n> | FROM <session> | TO <session> | TYPE assign|report|blocked|question" with the vyntec Tasks ID it belongs to.')

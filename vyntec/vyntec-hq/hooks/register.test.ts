@@ -181,6 +181,7 @@ function team(on, role: string | null, opts: { notionFails?: boolean } = {}) {
     return { value: { content: [{ type: 'text', text: 'ok' }], isError: false } }
   })
   on('tool.list', () => ({ value: [] }))
+  on('agent.list', () => ({ value: [{ id: 'a46965924fd941b47', description: 'qa-lead recheck', type: 'vyntec-hq:qa-lead', status: 'running' }] }))
   on('session.send', ($, e) => { rec.delivered.push(e.text); return { isDelivered: true } })
   on('session.receive', ($, e) => ({ text: e.text }))
   return rec
@@ -244,6 +245,13 @@ test('a failed Notion write still delivers the message and shows a status line',
   expect(r.isDelivered).toBe(true)
   expect(rec.delivered.length).toBe(1)
   expect(rec.status.join(' ')).toMatch(/Notion log failed for VT-10 assign .*delivered/)
+})
+
+test('a head messaging its own subagent is not guarded', async ($, on) => {
+  const rec = team(on, 'delivery')
+  const r = await $.session.send({ to: 'a46965924fd941b47', text: 'Recheck N1-N5' })
+  expect(r.isDelivered).toBe(true)
+  expect(rec.delivered).toEqual(['Recheck N1-N5'])
 })
 
 test('a subagent note to main is not guarded', async ($, on) => {
