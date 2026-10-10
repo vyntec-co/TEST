@@ -1,0 +1,5 @@
+{
+  "name": "vyntec",
+  "owner": { "name": "vyntec" },
+  "plugins": [{ "name": "vyntec-hq", "source": "./vyntec-hq", "description": "vyntec operations plugin" }]
+}
