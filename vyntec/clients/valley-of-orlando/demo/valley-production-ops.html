@@ -131,6 +131,10 @@ dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .itemcard{border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
 .itemcard.hv-card{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
 .itemcard h2{margin:0;font-size:20px}
+.ipic{margin:0;background:linear-gradient(180deg,var(--sunk),var(--surface));border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ipic img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
+.ipic figcaption{font-size:11px;color:var(--muted);padding:4px 8px;border-top:1px solid var(--line)}
+.ipic.sm img{aspect-ratio:auto;height:130px}
 .quick{display:flex;flex-wrap:wrap;gap:6px}
 .quick button{font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:4px 8px}
 fieldset{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:0;display:flex;flex-wrap:wrap;gap:8px 16px}
@@ -505,6 +509,7 @@ function openItem(code){
   $("#drawerHost").innerHTML=`<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(i.name)}">
     <header><div style="flex:1;min-width:0"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2><div class="row" style="margin-top:6px">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</div></div><button class="btn" id="closeD" aria-label="Close">Close</button></header>
     <div class="body">
+      ${picHtml(i)}
       <dl class="kv"><dt>Crew</dt><dd>${i.dept}</dd><dt>Type</dt><dd>${esc(i.type)}</dd><dt>Degree</dt><dd>${i.degree}</dd><dt>Size</dt><dd>${esc(i.size)}</dd><dt>Location</dt><dd>${esc(i.location)}</dd><dt>Condition</dt><dd>${esc(i.condition)}</dd>${i.high?`<dt>Insured value</dt><dd>${esc(i.value)}</dd><dt>Sign-out</dt><dd>${LEADS.Wardrobe} only</dd>`:""}</dl>
       ${i.dept==="Wardrobe"?`<button class="btn" data-room="${i.code}" style="align-self:flex-start">Show in wardrobe room</button>`:""}
       <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Actions</h3>${actionsFor(i,"d")}</div>
@@ -589,7 +594,7 @@ function scan(el){
     if(!code){host.innerHTML=`<div class="panel"><p class="muted" style="margin:0">Scan or type a code and the piece appears here with the next step for it.</p></div>`;return}
     if(!i){host.innerHTML=`<div class="banner bad">No piece with code “${esc(code)}”. Check the tag, or add it as a new piece during tagging.</div>`;return}
     if(crew!=="All"&&i.dept!==crew){host.innerHTML=`<div class="banner bad">${esc(i.code)} belongs to the ${i.dept} crew. Hand it to them.</div>`;return}
-    host.innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" id="scanCard"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} <span class="small muted">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span></div>${actionsFor(i,"s")}<button class="btn" data-open="${i.code}" style="align-self:flex-start">Open full record</button></div>`;
+    host.innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" id="scanCard"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2>${picHtml(i)}<div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} <span class="small muted">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span></div>${actionsFor(i,"s")}<button class="btn" data-open="${i.code}" style="align-self:flex-start">Open full record</button></div>`;
     host.id="scanResult";
     const card=$("#scanCard"); card.id="scanHost";
     bindActions(card,i,()=>{show(i.code)});
@@ -645,6 +650,75 @@ function makeRenderer(wrap){
 function sizeTo(wrap,r,cam){const w=wrap.clientWidth,h=wrap.clientHeight||w*.62;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
 function hexOf(v){return new THREE.Color(cssv(v)||"#888")}
 
+/* ---------- item models (shared by the 3D views and the item pictures) ---------- */
+const WCOL={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
+function mannequin(ghost){
+  const g=new THREE.Group(), o=ghost?{transparent:true,opacity:.1,depthWrite:false}:{};
+  const skin=new THREE.MeshStandardMaterial({color:0xc9b8a6,roughness:.9,...o});
+  const add=(geo,m,x,y,z)=>{const k=new THREE.Mesh(geo,m);k.position.set(x,y,z);g.add(k);return k};
+  if(!ghost) add(new THREE.CylinderGeometry(.6,.6,.06,32),new THREE.MeshStandardMaterial({color:0x555b66}),0,.03,0);
+  add(new THREE.SphereGeometry(.2,24,16),skin,0,2.12,0);
+  add(new THREE.CylinderGeometry(.08,.09,.14,16),skin,0,1.92,0);
+  add(new THREE.CylinderGeometry(.27,.22,.85,24),skin,0,1.45,0);
+  add(new THREE.CylinderGeometry(.22,.2,.25,24),skin,0,.95,0);
+  [-.11,.11].forEach(x=>add(new THREE.CylinderGeometry(.075,.065,.82,12),skin,x,.43,0));
+  [-.36,.36].forEach(x=>{const a=add(new THREE.CylinderGeometry(.055,.05,.78,12),skin,x,1.42,0);a.rotation.z=x>0?.18:-.18});
+  return g;
+}
+function itemModel(i){
+  const g=new THREE.Group();
+  const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.7,side:THREE.DoubleSide,...o});
+  const m=M(WCOL[i.type]||0x888888,{metalness:i.type==="Collar"||i.type==="Mask"?.45:0});
+  const put=(geo,x,y,z,rx=0,rz=0,mm=m)=>{const o=new THREE.Mesh(geo,mm);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;g.add(o);return o};
+  if(i.dept==="Wardrobe"){
+    switch(i.type){
+      case "Robe":case "Tunic":case "Coat":{const len=i.type==="Tunic"?1.0:1.75;put(new THREE.CylinderGeometry(.3,i.type==="Tunic"?.36:.48,len,32,1,true),0,1.86-len/2,0);[-.37,.37].forEach(x=>put(new THREE.CylinderGeometry(.075,.1,.62,12),x,1.52,0,0,x>0?.18:-.18));break}
+      case "Cape":put(new THREE.CylinderGeometry(.34,.62,1.5,32,1,true,Math.PI*.15,Math.PI*1.7),0,1.15,-.02);break;
+      case "Sash":{const s=new THREE.BoxGeometry(.13,1.05,.36);put(s,0,1.45,0,0,-.62);break}
+      case "Collar":put(new THREE.TorusGeometry(.24,.05,10,32),0,1.86,0,Math.PI/2);put(new THREE.ConeGeometry(.09,.22,4),0,1.68,.27,Math.PI);break;
+      case "Gloves":[-.44,.44].forEach(x=>put(new THREE.SphereGeometry(.075,12,10),x,1.02,0));break;
+      case "Footwear":[-.11,.11].forEach(x=>put(new THREE.BoxGeometry(.14,.07,.3),x,.07,.05));break;
+      case "Headpiece":put(new THREE.CylinderGeometry(.19,.22,.26,24),0,2.33,0);put(new THREE.TorusGeometry(.215,.025,8,32),0,2.22,0,Math.PI/2);break;
+      case "Mask":put(new THREE.SphereGeometry(.205,24,16,Math.PI*.15,Math.PI*.7,Math.PI*.25,Math.PI*.42),0,2.12,.01);{const eye=new THREE.MeshStandardMaterial({color:0x111111});[-.075,.075].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.032,12,8),eye);e.scale.set(1.4,.7,.5);e.position.set(x,2.16,.19);g.add(e)});put(new THREE.ConeGeometry(.03,.1,4),0,2.09,.215,-.25)}break;
+      default:put(new THREE.BoxGeometry(.2,.2,.2),0,1.4,.3);
+    }
+    return g;
+  }
+  // props: simple sample shapes by name; the real photo replaces the picture at tagging
+  const wood=M(0x7a5634), gold=M(0xc9a227,{metalness:.6,roughness:.35}), steel=M(0xc0c4cc,{metalness:.7,roughness:.3}), red=M(0x8e1b2c);
+  const C=(rt,rb,h,n=20)=>new THREE.CylinderGeometry(rt,rb,h,n), B=(x,y,z)=>new THREE.BoxGeometry(x,y,z);
+  switch(i.name){
+    case "Stage sword (blunt)": put(B(.07,1,.02),0,.75,0,0,0,steel); put(B(.34,.05,.07),0,.24,0,0,0,gold); put(C(.03,.03,.2),0,.12,0,0,0,wood); put(new THREE.SphereGeometry(.045,12,10),0,0,0,0,0,gold); break;
+    case "Staff": put(C(.035,.04,1.7),0,.85,0,0,0,wood); put(new THREE.SphereGeometry(.08,16,12),0,1.74,0,0,0,gold); break;
+    case "Lantern": put(B(.28,.36,.28),0,.3,0,0,0,M(0xf1d27a,{transparent:true,opacity:.55,emissive:0xf1c24a,emissiveIntensity:.4})); put(B(.32,.04,.32),0,.1,0,0,0,M(0x2b2b2b)); put(new THREE.ConeGeometry(.24,.2,4),0,.58,0,0,0,M(0x2b2b2b)); put(new THREE.TorusGeometry(.07,.012,8,20),0,.72,0,0,0,M(0x2b2b2b)); break;
+    case "Scroll": put(C(.07,.07,.6),0,.08,0,0,Math.PI/2,M(0xe8dcb5)); [-.33,.33].forEach(x=>put(C(.02,.02,.12),x,.08,0,0,Math.PI/2,wood)); break;
+    case "Chalice": put(C(.13,.16,.03),0,.015,0,0,0,gold); put(C(.025,.03,.28),0,.17,0,0,0,gold); put(C(.13,.05,.2,24),0,.4,0,0,0,gold); break;
+    case "Throne chair": put(B(.9,.12,.8),0,.5,0,0,0,wood); put(B(.9,1.1,.12),0,1.1,-.34,0,0,wood); put(B(.7,.06,.6),0,.59,.02,0,0,red); put(B(.7,.8,.04),0,1.1,-.27,0,0,red); [[-.4,-.35],[.4,-.35],[-.4,.35],[.4,.35]].forEach(([x,z])=>put(B(.08,.45,.08),x,.22,z,0,0,wood)); break;
+    case "Altar cloth": put(B(1.1,.46,.7),0,.25,0,0,0,wood); put(B(1.2,.04,.8),0,.5,0,0,0,M(0xeeeeea)); [-.6,.6].forEach(x=>put(B(.02,.45,.8),x,.3,0,0,0,M(0xeeeeea)));put(B(1.2,.32,.02),0,.35,.4,0,0,M(0xeeeeea)); put(B(.06,.46,.06),0,.27,0,0,0,gold); break;
+    case "Banner": put(C(.02,.02,2),0,1,0,0,0,wood); put(C(.015,.015,1),0,1.95,0,0,Math.PI/2,wood); put(B(.9,1.3,.02),0,1.28,.02,0,0,red); put(B(.5,.5,.025),0,1.35,.03,0,0,gold); break;
+    case "Candle stand": put(C(.16,.2,.05),0,.025,0,0,0,gold); put(C(.025,.03,1.2),0,.62,0,0,0,gold); put(C(.09,.06,.06),0,1.24,0,0,0,gold); put(C(.035,.035,.25),0,1.4,0,0,0,M(0xf5f0e1)); put(new THREE.ConeGeometry(.02,.06,8),0,1.56,0,0,0,M(0xffb347,{emissive:0xff9a2a,emissiveIntensity:.8})); break;
+    default: put(C(.16,.16,.5),0,.25,0,0,0,wood);
+  }
+  return g;
+}
+/* item pictures: one shared offscreen renderer draws each piece once and caches it */
+const PICS={}; let picR=null;
+function itemPic(i){
+  if(i.code in PICS) return PICS[i.code];
+  if(!have3d()) return "";
+  try{
+    if(!picR){picR=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});picR.setPixelRatio(1);picR.setSize(320,240,false)}
+    const scene=new THREE.Scene(); scene.add(new THREE.HemisphereLight(0xffffff,0x556070,1)); const dl=new THREE.DirectionalLight(0xffffff,.75); dl.position.set(2,4,5); scene.add(dl);
+    const g=itemModel(i); scene.add(g); if(i.dept==="Wardrobe") scene.add(mannequin(true));
+    const box=new THREE.Box3().setFromObject(g), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3()), d=Math.max(sz.x,sz.y*1.25,sz.z,.3);
+    const cam=new THREE.PerspectiveCamera(30,4/3,.01,100); cam.position.set(c.x+d*(i.type==="Mask"||i.type==="Headpiece"?.15:.6),c.y+d*.35,c.z+d*2.2); cam.lookAt(c);
+    picR.render(scene,cam); PICS[i.code]=picR.domElement.toDataURL("image/png");
+    scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});
+  }catch(e){PICS[i.code]=""}
+  return PICS[i.code];
+}
+const picHtml=(i,sm)=>{const u=itemPic(i);return u?`<figure class="ipic${sm?" sm":""}"><img src="${u}" alt="Illustration of ${esc(i.name)}"><figcaption>Illustration · the real photo is added at tagging</figcaption></figure>`:""};
+
 /* ---------- dressing guide ---------- */
 let gDeg="32°", gRole=0, gStep=99;
 function guide(el){
@@ -681,34 +755,8 @@ function mountDress(wrap,pieces,step,focus){
   const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
   const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,1.15,0); ctl.enablePan=false; ctl.minDistance=3; ctl.maxDistance=9; ctl.autoRotate=!matchMedia("(prefers-reduced-motion: reduce)").matches; ctl.autoRotateSpeed=1.4; ctl.update();
   scene.add(new THREE.HemisphereLight(0xffffff,0x444455,.9)); const dl=new THREE.DirectionalLight(0xffffff,.8); dl.position.set(3,5,4); scene.add(dl);
-  const skin=new THREE.MeshStandardMaterial({color:0xc9b8a6,roughness:.9});
-  const add=(g,m,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);scene.add(o);return o};
-  // mannequin
-  add(new THREE.CylinderGeometry(.6,.6,.06,32),new THREE.MeshStandardMaterial({color:0x555b66}),0,.03,0);
-  add(new THREE.SphereGeometry(.2,24,16),skin,0,2.12,0);
-  add(new THREE.CylinderGeometry(.08,.09,.14,16),skin,0,1.92,0);
-  add(new THREE.CylinderGeometry(.27,.22,.85,24),skin,0,1.45,0);
-  add(new THREE.CylinderGeometry(.22,.2,.25,24),skin,0,.95,0);
-  [-.11,.11].forEach(x=>add(new THREE.CylinderGeometry(.075,.065,.82,12),skin,x,.43,0));
-  [-.36,.36].forEach(x=>{const a=add(new THREE.CylinderGeometry(.055,.05,.78,12),skin,x,1.42,0);a.rotation.z=x>0?.18:-.18});
-  const col={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
-  const mat=t=>new THREE.MeshStandardMaterial({color:col[t]||0x888888,roughness:.7,metalness:t==="Collar"||t==="Mask"?.45:0,side:THREE.DoubleSide});
-  const build=(i)=>{
-    const g=new THREE.Group(); const m=mat(i.type);
-    const put=(geo,x,y,z,rx=0,rz=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;g.add(o)};
-    switch(i.type){
-      case "Robe":case "Tunic":case "Coat":{const len=i.type==="Tunic"?1.0:1.75;put(new THREE.CylinderGeometry(.3,i.type==="Tunic"?.36:.48,len,32,1,true),0,1.86-len/2,0);[-.37,.37].forEach(x=>put(new THREE.CylinderGeometry(.075,.1,.62,12),x,1.52,0,0,x>0?.18:-.18));break}
-      case "Cape":put(new THREE.CylinderGeometry(.34,.62,1.5,32,1,true,Math.PI*.15,Math.PI*1.7),0,1.15,-.02);break;
-      case "Sash":{const s=new THREE.BoxGeometry(.13,1.05,.36);put(s,0,1.45,0,0,-.62);break}
-      case "Collar":put(new THREE.TorusGeometry(.24,.05,10,32),0,1.86,0,Math.PI/2);put(new THREE.ConeGeometry(.09,.22,4),0,1.68,.27,Math.PI);break;
-      case "Gloves":[-.44,.44].forEach(x=>put(new THREE.SphereGeometry(.075,12,10),x,1.02,0));break;
-      case "Footwear":[-.11,.11].forEach(x=>put(new THREE.BoxGeometry(.14,.07,.3),x,.07,.05));break;
-      case "Headpiece":put(new THREE.CylinderGeometry(.19,.22,.26,24),0,2.33,0);put(new THREE.TorusGeometry(.215,.025,8,32),0,2.22,0,Math.PI/2);break;
-      case "Mask":put(new THREE.SphereGeometry(.205,24,16,-Math.PI*.35,Math.PI*.7,Math.PI*.25,Math.PI*.42),0,2.12,.01);break;
-      default:put(new THREE.BoxGeometry(.2,.2,.2),0,1.4,.3);
-    }
-    scene.add(g); return g;
-  };
+  scene.add(mannequin());
+  const build=i=>{const g=itemModel(i);scene.add(g);return g};
   const layers=pieces.map(build); layers.forEach((m,k)=>m.visible=k<step);
   if(focus&&pieces.some(p=>p.code===focus))layers.forEach((g,k)=>{if(pieces[k].code!==focus)g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false}})}); // ghost the rest so the piece keeps its real colour
   let raf=0,alive=true; const tick=()=>{if(!alive)return;ctl.update();r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
@@ -735,7 +783,7 @@ function stage(el){
   $("#sDeg").onchange=e=>{sDeg=e.target.value;sScene=0;render()};
   el.querySelectorAll("[data-scene]").forEach(b=>b.onclick=()=>{sScene=+b.dataset.scene;render()});
   el.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.cam==="top";render()});
-  const card=code=>{const i=item(code);$("#sCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="sCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close prop details">Close</button></div><b>${esc(i.name)}</b><div class="row">${chip(i.status)}</div><span class="small muted">${esc(i.location)} · ${esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#sCardClose").onclick=()=>{$("#sCard").innerHTML="";highlight(null)}};
+  const card=code=>{const i=item(code);$("#sCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="sCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close prop details">Close</button></div>${picHtml(i,1)}<b>${esc(i.name)}</b><div class="row">${chip(i.status)}</div><span class="small muted">${esc(i.location)} · ${esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#sCardClose").onclick=()=>{$("#sCard").innerHTML="";highlight(null)}};
   el.querySelectorAll("[data-pick]").forEach(b=>{const go=()=>{card(b.dataset.pick);highlight(b.dataset.pick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   let highlight=()=>{};
   if(!have3d()){$("#sLoad").textContent="The 3D stage needs WebGL and couldn't load here. The props list still works.";return}
@@ -822,7 +870,7 @@ function room(el){
       ${Object.entries(byLoc).map(([loc,list])=>`<h3 style="margin-top:12px">${esc(loc)}</h3><ul class="pull" data-loc>${list.map(i=>`<li class="pick-row" data-rpick="${i.code}" tabindex="0" role="button" aria-label="Show ${esc(i.name)} in the room">${chip(i.status)}<span><span class="code">${i.code}</span> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${i.degree} · size ${esc(i.size)}</span></span><span></span></li>`).join("")}</ul>`).join("")}
     </div></div>`;
   el.querySelectorAll("[data-rcam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.rcam==="top";render()});
-  const card=code=>{const i=item(code);if(matchMedia("(max-width:980px)").matches){const w=$("#rWrap");if(w&&w.getBoundingClientRect().bottom<0)w.scrollIntoView({block:"start",behavior:"smooth"})}$("#rCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="rCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close piece details">Close</button></div><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span><span class="small muted">${i.status==="Pulled"||i.status==="In use"?"Out of the room now. Its spot is held empty for the return.":esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#rCardClose").onclick=()=>{$("#rCard").innerHTML="";hl(null)}};
+  const card=code=>{const i=item(code);if(matchMedia("(max-width:980px)").matches){const w=$("#rWrap");if(w&&w.getBoundingClientRect().bottom<0)w.scrollIntoView({block:"start",behavior:"smooth"})}$("#rCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="rCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close piece details">Close</button></div>${picHtml(i,1)}<b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span><span class="small muted">${i.status==="Pulled"||i.status==="In use"?"Out of the room now. Its spot is held empty for the return.":esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#rCardClose").onclick=()=>{$("#rCard").innerHTML="";hl(null)}};
   let hl=()=>{};
   el.querySelectorAll("[data-rpick]").forEach(b=>{const go=()=>{card(b.dataset.rpick);hl(b.dataset.rpick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   if(!have3d()){$("#rLoad").textContent="The 3D room needs WebGL and couldn't load here. The location list still works.";return}
@@ -875,7 +923,7 @@ function mountRoom(wrap,its,top,onPick,zoom){
     }else if(R.kind==="cabinet"){
       box(1.6,1.9,.7,dark,R.x,.95,R.z); box(1.5,1.7,.03,M(0xbfd6e6,{transparent:true,opacity:.25,metalness:.3}),R.x,1.0,R.z+.37);
       box(.08,.18,.06,M(0xc9a227,{metalness:.8,roughness:.3}),R.x+.6,1.0,R.z+.4); sign("LOCKED · masks",R.x,2.3,R.z);
-      list.forEach((i,k)=>{const x=R.x-.4+k*.8, isOut=i.status==="Pulled"||i.status==="In use";box(.08,.5,.08,M(0x222222),x,.75,R.z);const m=add(new THREE.SphereGeometry(.2,20,14,-Math.PI*.4,Math.PI*.8),isOut?outMat:M(col.Mask,{metalness:.5,roughness:.35}),x,1.15,R.z+.05);box(.1,.05,.02,tagOf(i),x,.9,R.z+.32);reg(i,m,x,1.1,R.z,.3,.7)});
+      list.forEach((i,k)=>{const x=R.x-.4+k*.8, isOut=i.status==="Pulled"||i.status==="In use";box(.08,.5,.08,M(0x222222),x,.75,R.z);const m=add(new THREE.SphereGeometry(.2,20,14,Math.PI*.1,Math.PI*.8),isOut?outMat:M(col.Mask,{metalness:.5,roughness:.35}),x,1.15,R.z+.05);box(.1,.05,.02,tagOf(i),x,.9,R.z+.32);reg(i,m,x,1.1,R.z,.3,.7)});
     }
   });
   const selRing=add(new THREE.TorusGeometry(.4,.04,8,40),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.8}),0,0,0); selRing.rotation.x=Math.PI/2; selRing.visible=false;
@@ -1133,7 +1181,7 @@ function itemSheet(body,i,dept){
   const out=OUT.includes(i.status);
   body.innerHTML=`<button class="pback" id="pBack">‹ Back</button>
     <div class="pcard ${i.high?"hv-card":""}" id="pSheetCard"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span>${chip(i.status)}</div>
-      <b style="font-size:18px">${esc(i.name)}</b>${i.high?'<span class="hv" style="align-self:flex-start">HIGH VALUE · lead signs it out</span>':""}
+      ${picHtml(i)}<b style="font-size:18px">${esc(i.name)}</b>${i.high?'<span class="hv" style="align-self:flex-start">HIGH VALUE · lead signs it out</span>':""}
       <div class="ploc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span><b>${esc(i.location)}</b><br><span class="small muted">${out?"Out of storage now. Its spot is held for the return.":"In its spot · "+esc(i.condition)}</span></span></div>
       <span class="small muted">${i.degree} · ${esc(i.type)}${i.size&&i.size!=="-"?" · size "+esc(i.size):""}</span></div>
     <div class="seg pseg" role="group" aria-label="View">${segs.map(([k,l])=>`<button type="button" data-pseg="${k}" aria-pressed="${k===pSeg}">${l}</button>`).join("")}</div>
