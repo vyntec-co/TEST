@@ -27,7 +27,7 @@ Live status inside the 3D viewer is **not** in the demo: a page can't safely rea
 | M | Volunteer points | Contact fields **Volunteer points** + **Level**; workflows add points on check-in, crew shift, rehearsal, served role; leaderboard via smart list sorted by points | fields API; workflows UI | fields REAL |
 | N | Communications | Email/SMS **templates** + workflows, officer approval before each batch; SMS only after A2P registration and opt-in | templates API (REAL, piloted VT-872); workflows UI | REAL / INFERRED |
 
-| O | Crew / member app (what each person sees) | The platform's member portal and mobile app: Today (check-in, my role or pull list, schedule), Scan, My role, Points | portal/app UI | INFERRED |
+| O | Crew / member app (what each person sees) | The platform's member portal and mobile app: Today (check-in, my role or pull list, schedule), Scan, My role, Points. Each piece opens a sheet: where it is stored (3D room or stage mark) and how it is worn (3D figure, dressing steps); the 3D lives in the guide lesson, the sheet is the record page | portal/app UI | INFERRED |
 | P | Intercom (channels + person to person) | **Not native.** The platform has internal team chat (INFERRED) but no push-to-talk voice. Options: text channels in the platform's app, plus a radio app for voice; or a custom add-on. Decide in discovery. The demo runs it live between open devices and reads calls aloud. | — | gap |
 
 ## 2. Inventory Item fields (DEMO)

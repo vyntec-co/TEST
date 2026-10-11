@@ -178,6 +178,21 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 .phone .ptabs button[aria-current="page"]{color:var(--accent)}
 .pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .pcard h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.phone .ptop{flex-direction:row;align-items:center;gap:10px}
+.pav{width:38px;height:38px;flex:none;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.ppts{font-size:12px;font-weight:700;background:var(--accent-soft);color:var(--accent);padding:4px 8px;border-radius:999px;white-space:nowrap}
+.pback{align-self:flex-start;border:0;background:none;color:var(--accent);font-weight:700;font-size:14px;padding:2px 0;cursor:pointer}
+.p3d{position:relative;height:280px;flex:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--sunk)}
+.p3d canvas{display:block;width:100%;height:100%;touch-action:none}
+.pseg{display:flex}.pseg button{flex:1}
+.ploc{display:flex;gap:8px;align-items:flex-start;background:var(--sunk);border-radius:8px;padding:8px 10px}
+.ploc svg{width:20px;height:20px;flex:none;stroke:var(--accent);fill:none;stroke-width:2;margin-top:2px}
+.prow1{flex-direction:row;align-items:center;justify-content:space-between}
+.pbar{height:8px;border-radius:999px;background:var(--sunk);overflow:hidden}.pbar span{display:block;height:100%;background:var(--accent)}
+.prole{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;cursor:pointer;font:inherit;color:inherit}
+.prole:hover{background:var(--sunk)}
+.pscan{align-items:center;text-align:center;padding:18px 12px}.pscan>svg{width:40px;height:40px;stroke:var(--accent);fill:none;stroke-width:1.6}
+.pscan label.cam{align-self:stretch;padding-block:12px;font-size:15px}
 @media (max-width:760px){.phone{border:0;border-radius:0;height:auto;max-height:none;min-height:calc(100vh - 120px);box-shadow:none;width:100%}.phonewrap{padding:0}}
 /* intercom */
 .ic{display:flex;flex-direction:column;gap:10px;min-height:0}
@@ -643,12 +658,17 @@ function guide(el){
      </div></div>`;
   $("#gDeg").onchange=e=>{gDeg=e.target.value;gRole=0;gStep=99;render()};
   $("#gRole").onchange=e=>{gRole=+e.target.value;gStep=99;render()};
-  const setStep=v=>{gStep=v;$("#gStepN").textContent=v;$("#gStep").value=v;$("#gSteps").querySelectorAll("li").forEach(li=>{const s=+li.dataset.step;li.className=s===v?"on":s>v?"future":""});layers.forEach((m,k)=>m.visible=k<v)};
+  const setStep=v=>{gStep=v;$("#gStepN").textContent=v;$("#gStep").value=v;$("#gSteps").querySelectorAll("li").forEach(li=>{const s=+li.dataset.step;li.className=s===v?"on":s>v?"future":""});dz&&dz.setStep(v)};
   $("#gStep").oninput=e=>setStep(+e.target.value);
   $("#gSteps").addEventListener("click",e=>{if(e.target.closest("[data-open]"))return;const li=e.target.closest("li");if(li)setStep(+li.dataset.step)});
-  let layers=[];
+  let dz=null;
   if(!have3d()){$("#mLoad").textContent="The 3D view needs WebGL and couldn't load here. The dressing steps still work.";return}
   const wrap=$("#mWrap"); $("#mLoad").remove();
+  dz=mountDress(wrap,pieces,gStep);
+}
+
+/* the dressed mannequin; reused by the dressing guide and the crew app */
+function mountDress(wrap,pieces,step,focus){
   const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
   const cam=new THREE.PerspectiveCamera(35,1.6,.1,100); cam.position.set(0,1.6,6.2);
   const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
@@ -682,11 +702,13 @@ function guide(el){
     }
     scene.add(g); return g;
   };
-  layers=pieces.map(build); layers.forEach((m,k)=>m.visible=k<gStep);
+  const layers=pieces.map(build); layers.forEach((m,k)=>m.visible=k<step);
+  if(focus&&pieces.some(p=>p.code===focus))layers.forEach((g,k)=>{if(pieces[k].code!==focus)g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false}})}); // ghost the rest so the piece keeps its real colour
   let raf=0,alive=true; const tick=()=>{if(!alive)return;ctl.update();r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
   const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
   ctl.addEventListener("start",()=>ctl.autoRotate=false);
   loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  return {setStep:v=>layers.forEach((m,k)=>m.visible=k<v)};
 }
 
 /* ---------- stage layout ---------- */
@@ -711,11 +733,17 @@ function stage(el){
   let highlight=()=>{};
   if(!have3d()){$("#sLoad").textContent="The 3D stage needs WebGL and couldn't load here. The props list still works.";return}
   const wrap=$("#sWrap"); $("#sLoad").remove();
+  const h3=mountStage(wrap,placed,sTop,c=>{card(c);highlight(c)});
+  highlight=code=>{h3(code);document.querySelectorAll("#sList [data-pick]").forEach(b=>b.classList.toggle("on",b.dataset.pick===code))};
+}
+
+/* the 3D stage; reused by the stage layout and the crew app */
+function mountStage(wrap,placed,top,onPick,zoom){
   const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
   const cam=new THREE.PerspectiveCamera(40,1.6,.1,200);
-  if(sTop){cam.position.set(0,17,0.01)}else{cam.position.set(0,7.2,14.5)}
+  if(top){cam.position.set(0,17,0.01)}else{cam.position.set(0,7.2,14.5)}
   const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
-  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.6,-1.2); ctl.maxPolarAngle=sTop?0.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=22; ctl.enableRotate=!sTop; ctl.update();
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.6,-1.2); ctl.maxPolarAngle=top?0.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=22; ctl.enableRotate=!top; ctl.update();
   scene.add(new THREE.HemisphereLight(0xffffff,0x333344,.85)); const sp=new THREE.DirectionalLight(0xfff1dc,.9); sp.position.set(-4,9,6); scene.add(sp);
   const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
   const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);scene.add(o);return o};
@@ -747,17 +775,17 @@ function stage(el){
   });
   let sel=null;
   const selRing=new THREE.Mesh(new THREE.TorusGeometry(.75,.06,8,48),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.7})); selRing.rotation.x=Math.PI/2; selRing.visible=false; scene.add(selRing);
-  highlight=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.25);selRing.position.set(sel.position.x,.54,sel.position.z)}
-    document.querySelectorAll("#sList [data-pick]").forEach(b=>b.classList.toggle("on",b.dataset.pick===code))};
+  const hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.25);selRing.position.set(sel.position.x,.54,sel.position.z);if(zoom){ctl.target.set(sel.position.x,.8,sel.position.z);cam.position.set(sel.position.x+3,6,sel.position.z+8.5);ctl.update()}}};
   const ray=new THREE.Raycaster(), v=new THREE.Vector2();
   const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
   let down=null;
   r.domElement.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}},true);
-  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(moved>6)return;const c=pick(e);if(c){card(c);highlight(c)}},true);
+  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(moved>6)return;const c=pick(e);if(c){hl(c);onPick(c)}},true);
   r.domElement.addEventListener("pointermove",e=>{if(e.buttons)return;r.domElement.style.cursor=pick(e)?"pointer":"grab"});
   let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)sel.rotation.y=(performance.now()-t0)/900;r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
   const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
   loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  return hl;
 }
 
 /* ---------- wardrobe room ---------- */
@@ -792,11 +820,19 @@ function room(el){
   el.querySelectorAll("[data-rpick]").forEach(b=>{const go=()=>{card(b.dataset.rpick);hl(b.dataset.rpick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   if(!have3d()){$("#rLoad").textContent="The 3D room needs WebGL and couldn't load here. The location list still works.";return}
   const wrap=$("#rWrap"); $("#rLoad").remove();
+  const h3=mountRoom(wrap,its,sTop,c=>{card(c);hl(c)});
+  hl=code=>{h3(code);document.querySelectorAll("#view [data-rpick]").forEach(b=>b.classList.toggle("on",b.dataset.rpick===code))};
+  if(roomFocus&&item(roomFocus)){card(roomFocus);hl(roomFocus)} roomFocus=null;
+}
+
+/* the 3D wardrobe room; reused by the wardrobe room view and the crew app */
+function mountRoom(wrap,its,top,onPick,zoom){
+  const byLoc={}; its.forEach(i=>(byLoc[i.location]=byLoc[i.location]||[]).push(i));
   const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
   const cam=new THREE.PerspectiveCamera(40,1.6,.1,200);
-  if(sTop) cam.position.set(0,16,.01); else cam.position.set(0,7.6,11.2);
+  if(top) cam.position.set(0,16,.01); else cam.position.set(0,7.6,11.2);
   const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
-  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.8,-.3); ctl.maxPolarAngle=sTop?.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=24; ctl.enableRotate=!sTop; ctl.update();
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.8,-.3); ctl.maxPolarAngle=top?.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=24; ctl.enableRotate=!top; ctl.update();
   scene.add(new THREE.HemisphereLight(0xffffff,0x3a3d48,.95)); const dl=new THREE.DirectionalLight(0xffffff,.7); dl.position.set(3,10,6); scene.add(dl);
   const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
   const add=(geo,m,x,y,z,ry=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.y=ry;scene.add(o);return o};
@@ -805,8 +841,8 @@ function room(el){
   box(13,.1,9,M(0x9a8f80),0,-.05,0); box(13,3.2,.15,M(0xd9d4cc),0,1.6,-4.5); box(.15,3.2,9,M(0xcfc9c0),-6.5,1.6,0); box(.15,3.2,9,M(0xcfc9c0),6.5,1.6,0);
   const metal=M(0x7d838f,{metalness:.5,roughness:.4}), wood=M(0x8a6a48), dark=M(0x3a3f4a);
   const col={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
-  const sign=(text,x,y,z,w=2.4)=>{const cv=document.createElement("canvas");cv.width=512;cv.height=96;const c=cv.getContext("2d");c.fillStyle="rgba(23,26,33,.88)";c.fillRect(0,0,512,96);c.fillStyle="#fff";c.font="600 40px Public Sans, Arial, sans-serif";c.textAlign="center";c.textBaseline="middle";c.fillText(text,256,50);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false}));sp.scale.set(w,w*.1875,1);sp.position.set(x,y,z);scene.add(sp)};
-  const meshes={}, hits=[];
+  const sign=(text,x,y,z,w=2.4)=>{const cv=document.createElement("canvas");cv.width=512;cv.height=96;const c=cv.getContext("2d");c.fillStyle="rgba(23,26,33,.88)";c.fillRect(0,0,512,96);c.fillStyle="#fff";c.font="600 40px Public Sans, Arial, sans-serif";c.textAlign="center";c.textBaseline="middle";c.fillText(text,256,50);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:!zoom}));if(zoom)w*=.55;sp.scale.set(w,w*.1875,1);sp.position.set(x,y,z);scene.add(sp);signs.push(sp)};
+  const meshes={}, hits=[], signs=[];
   const tagOf=i=>{const c=hexOf(STATUS_VAR[i.status]);return M(c,{emissive:c,emissiveIntensity:.35})};
   const reg=(i,obj,hx,hy,hz,hr=.35,hh=1.4)=>{obj.userData.code=i.code;meshes[i.code]=obj;const h=add(new THREE.CylinderGeometry(hr,hr,hh,12),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),hx,hy,hz);h.userData.code=i.code;hits.push(h)};
   const outMat=M(0x9aa1b0,{transparent:true,opacity:.28});
@@ -837,18 +873,17 @@ function room(el){
   });
   const selRing=add(new THREE.TorusGeometry(.4,.04,8,40),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.8}),0,0,0); selRing.rotation.x=Math.PI/2; selRing.visible=false;
   let sel=null;
-  hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.12);selRing.position.set(sel.position.x,.03,sel.position.z)}
-    document.querySelectorAll("#view [data-rpick]").forEach(b=>b.classList.toggle("on",b.dataset.rpick===code))};
+  const hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.12);selRing.position.set(sel.position.x,.03,sel.position.z);if(zoom){ctl.target.set(sel.position.x,1.1,sel.position.z);cam.position.set(sel.position.x*.85,3.4,sel.position.z+(sel.position.z<0?5.2:4.6));ctl.update();signs.forEach(sp=>sp.visible=sp.position.distanceTo(cam.position)>4.5)}}};
   const ray=new THREE.Raycaster(), v=new THREE.Vector2();
   const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
   let down=null;
   r.domElement.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}},true);
-  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(mv>6)return;const c=pick(e);if(c){card(c);hl(c)}},true);
+  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(mv>6)return;const c=pick(e);if(c){hl(c);onPick(c)}},true);
   r.domElement.addEventListener("pointermove",e=>{if(e.buttons)return;r.domElement.style.cursor=pick(e)?"pointer":"grab"});
   let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)selRing.scale.setScalar(1+.08*Math.sin((performance.now()-t0)/250));r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
   const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
   loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
-  if(roomFocus&&meshes[roomFocus]){card(roomFocus);hl(roomFocus)} roomFocus=null;
+  return hl;
 }
 
 /* ---------- labels ---------- */
@@ -1073,41 +1108,115 @@ function intercom(el){
 
 /* ---------- crew app (what a crew or cast member sees on their phone) ---------- */
 const PT_ICONS={today:ICONS.reunion,scan:ICONS.scan,kit:ICONS.guide,radio:ICONS.intercom,points:ICONS.points};
+let pSheet=null, pSeg="where", pStep=99; // pSheet: {kind:"item",code} or {kind:"role",deg,role}
+const OUT=["Pulled","In use"], OK=["Ready","Pulled","In use"];
+const roleOf=code=>{for(const d in KITS)for(const r of KITS[d])if(r.items.includes(code))return {deg:d,role:r.role};return null};
+const stageOf=code=>{for(const d in STAGE_LAYOUT){const k=STAGE_LAYOUT[d].findIndex(sc=>sc.some(x=>x.c===code));if(k>=0)return {deg:d,scene:k}}return null};
+const rolePieces=(deg,role)=>(((KITS[deg]||[]).find(r=>r.role===role)||{items:[]}).items).map(item).filter(i=>i.dept==="Wardrobe").sort((a,b)=>LAYER_ORDER.indexOf(a.type)-LAYER_ORDER.indexOf(b.type));
+const initials=n=>String(n).split(/[ .]+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+function p3d(host,mount,fail){ // one WebGL view at a time inside the phone
+  if(!have3d()){host.innerHTML=`<div class="loading3d">${fail}</div>`;return null}
+  return mount(host);
+}
+function openSheet(x){pSheet=x;pSeg="where";pStep=99;render();const b=$("#pBody");if(b)b.scrollTop=0}
+function itemSheet(body,i,dept){
+  const isW=i.dept==="Wardrobe", ro=roleOf(i.code), st=stageOf(i.code);
+  const segs=isW?[["where","Where it's stored"],["worn","How it's worn"]]:[["where","Where it's stored"],["stage","On stage"]];
+  if(!segs.some(x=>x[0]===pSeg)) pSeg="where";
+  const out=OUT.includes(i.status);
+  body.innerHTML=`<button class="pback" id="pBack">‹ Back</button>
+    <div class="pcard ${i.high?"hv-card":""}" id="pSheetCard"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span>${chip(i.status)}</div>
+      <b style="font-size:18px">${esc(i.name)}</b>${i.high?'<span class="hv" style="align-self:flex-start">HIGH VALUE · lead signs it out</span>':""}
+      <div class="ploc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span><b>${esc(i.location)}</b><br><span class="small muted">${out?"Out of storage now. Its spot is held for the return.":"In its spot · "+esc(i.condition)}</span></span></div>
+      <span class="small muted">${i.degree} · ${esc(i.type)}${i.size&&i.size!=="-"?" · size "+esc(i.size):""}</span></div>
+    <div class="seg pseg" role="group" aria-label="View">${segs.map(([k,l])=>`<button type="button" data-pseg="${k}" aria-pressed="${k===pSeg}">${l}</button>`).join("")}</div>
+    <div class="p3d" id="p3d"></div><p class="small muted" id="p3dCap" style="margin:-4px 2px 0"></p><div id="pExtra"></div>
+    ${dept===i.dept?`<div class="pcard" id="pActCard"><h3>Update this piece</h3>${actionsFor(i,"s")}</div>`:""}`;
+  $("#pBack",body).onclick=()=>{pSheet=null;render()};
+  body.querySelectorAll("[data-pseg]").forEach(b=>b.onclick=()=>{pSeg=b.dataset.pseg;render()});
+  if(dept===i.dept) bindActions($("#pActCard",body),i,()=>render());
+  const host=$("#p3d",body), cap=$("#p3dCap",body), extra=$("#pExtra",body);
+  if(pSeg==="where"&&isW){
+    cap.textContent="The wardrobe room. The gold ring marks this piece's spot. Drag to look around.";
+    const hl=p3d(host,w=>mountRoom(w,S.items.filter(x=>x.dept==="Wardrobe"),false,c=>openSheet({kind:"item",code:c}),true),"The 3D room needs WebGL. Go to "+esc(i.location)+".");
+    if(hl) hl(i.code);
+  } else if(pSeg==="where"){
+    host.remove(); cap.remove();
+    extra.innerHTML=`<div class="pcard"><h3>Find it</h3><span>Props storage, <b>${esc(i.location)}</b>.</span><span class="small muted">The props room isn't mapped in 3D in this demo. In the live system the props lead maps it once, like the wardrobe room.</span>${st?`<button class="btn" data-pseg-go="stage" style="align-self:flex-start">See where it goes on stage</button>`:""}</div>`;
+    extra.querySelectorAll("[data-pseg-go]").forEach(b=>b.onclick=()=>{pSeg="stage";render()});
+  } else if(pSeg==="stage"){
+    if(!st){host.remove();cap.textContent="This piece isn't placed on stage in the sample layouts.";return}
+    cap.textContent=`${st.deg} · Scene ${st.scene+1}. The gold ring marks its mark on stage.`;
+    const hl=p3d(host,w=>mountStage(w,STAGE_LAYOUT[st.deg][st.scene],false,c=>openSheet({kind:"item",code:c}),true),"The 3D stage needs WebGL.");
+    if(hl) hl(i.code);
+  } else if(pSeg==="worn"){
+    if(!ro){host.remove();cap.textContent="No sample role uses this piece yet.";return}
+    const pcs=rolePieces(ro.deg,ro.role), k=pcs.findIndex(x=>x.code===i.code);
+    cap.textContent=`${ro.deg} · ${ro.role}, fully dressed. This piece is solid, the rest are see-through. Drag to turn the figure.`;
+    p3d(host,w=>mountDress(w,pcs,pcs.length,i.code),"The 3D figure needs WebGL.");
+    extra.innerHTML=`<div class="pcard"><h3>Step ${k+1} of ${pcs.length} when dressing</h3><span class="small">${esc(DRESS[i.type]||"Dress as shown.")}</span><button class="btn" id="pRoleGo" style="align-self:flex-start">Full dressing steps</button></div>`;
+    $("#pRoleGo",body).onclick=()=>openSheet({kind:"role",deg:ro.deg,role:ro.role});
+  }
+}
+function roleSheet(body,deg,role,{back=true,crewView=false,who=""}={}){
+  const pcs=rolePieces(deg,role); if(pStep>pcs.length) pStep=pcs.length;
+  body.innerHTML=`${back?'<button class="pback" id="pBack">‹ Back</button>':""}
+    <div class="pcard"><h3>${deg} · ${esc(role)}</h3>${who?`<span class="small">Cast: <b>${esc(who)}</b></span>`:""}<span class="small muted">${crewView?"Dress in this order. Tap a step to see it on the figure.":"The wardrobe crew dresses you in this order. Nothing to bring."}</span></div>
+    <div class="p3d" id="p3d"></div>
+    <label class="small muted" for="pStepR">Dressed through step <b id="pStepN">${pStep}</b> of ${pcs.length}</label><input type="range" id="pStepR" min="0" max="${pcs.length}" value="${pStep}">
+    <ol class="steps" id="pSteps">${pcs.map((i,k)=>`<li data-step="${k+1}" class="${k+1===pStep?"on":k+1>pStep?"future":""}"><span><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HV</span>':""}<br><span class="small">${esc(DRESS[i.type]||"")}</span>${crewView?`<br><span class="small muted">${esc(i.location)} · ${chip(i.status)}</span> <button class="btn" style="padding:0 6px;font-size:12px" data-pitem="${i.code}">Find it</button>`:""}</span></li>`).join("")}</ol>`;
+  if(back) $("#pBack",body).onclick=()=>{pSheet=null;render()};
+  const dz=p3d($("#p3d",body),w=>mountDress(w,pcs,pStep),"The 3D figure needs WebGL. The steps below still work.");
+  const set=v=>{pStep=v;$("#pStepN",body).textContent=v;$("#pStepR",body).value=v;body.querySelectorAll("#pSteps li").forEach(li=>{const s=+li.dataset.step;li.className=s===v?"on":s>v?"future":""});dz&&dz.setStep(v)};
+  $("#pStepR",body).oninput=e=>set(+e.target.value);
+  $("#pSteps",body).addEventListener("click",e=>{const f=e.target.closest("[data-pitem]");if(f){openSheet({kind:"item",code:f.dataset.pitem});return}const li=e.target.closest("li");if(li)set(+li.dataset.step)});
+}
 function crewApp(el){
   const pp=persona(), m=mem(pp.id), isCast=pp.role==="Cast", isSM=pp.role==="Stage manager", dept=pp.role.startsWith("Wardrobe")?"Wardrobe":pp.role.startsWith("Props")?"Props":null;
   $("#personaSel").innerHTML=PERSONAS.map(x=>`<option value="${x.id}" ${x.id===pp.id?"selected":""}>${esc(pname(x))} · ${x.role}</option>`).join("");
-  $("#personaSel").onchange=e=>{personaId=e.target.value;pTab="today";RADIO.ch=persona().ch;RADIO.dm=null;radioPresence();render()};
-  const tabs=[["today","Today"]].concat(dept?[["scan","Scan"]]:[]).concat([["kit",isCast?"My role":isSM?"Board":"Pull list"],["radio","Intercom"]]).concat(m?[["points","Points"]]:[]);
+  $("#personaSel").onchange=e=>{personaId=e.target.value;pTab="today";pSheet=null;RADIO.ch=persona().ch;RADIO.dm=null;radioPresence();render()};
+  const tabs=[["today","Today"]].concat(dept?[["scan","Scan"]]:[]).concat([["kit",isCast?"My costume":isSM?"Board":"Pull list"],["radio","Intercom"]]).concat(m?[["points","Points"]]:[]);
   if(!tabs.some(t=>t[0]===pTab)) pTab="today";
   el.innerHTML=`<p class="small muted" style="margin:0;text-align:center">What ${esc(pname(pp))} (${pp.role.toLowerCase()}) sees on their phone. Switch people in the top bar.</p>
    <div class="phonewrap"><div class="phone" role="region" aria-label="Crew app">
-     <div class="ptop"><span class="small muted">Valley of Orlando · Fall Reunion</span><b>${esc(pname(pp))}</b><span class="small muted">${pp.role}${m?` · ${m.points} pts`:""}</span></div>
+     <div class="ptop"><span class="pav" aria-hidden="true">${initials(pname(pp))}</span><span style="display:flex;flex-direction:column;min-width:0;flex:1"><b>${esc(pname(pp))}</b><span class="small muted">${pp.role} · Fall Reunion</span></span>${m?`<span class="ppts">${m.points} pts</span>`:""}</div>
      <div class="pbody" id="pBody"></div>
      <nav class="ptabs" aria-label="App">${tabs.map(([k,l])=>`<button type="button" data-ptab="${k}" ${k===pTab?'aria-current="page"':""}><svg viewBox="0 0 24 24" aria-hidden="true">${PT_ICONS[k]}</svg>${l}</button>`).join("")}</nav>
    </div></div>`;
-  el.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptab;render()});
+  el.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptab;pSheet=null;pStep=99;render()});
   const body=$("#pBody");
   const nextProd=S.productions.find(x=>x.stage!=="Reset")||S.productions[0];
+  const castIn=role=>{const sl=S.slots.find(x=>x.prod===nextProd.id&&x.role===role&&x.member);return sl?(mem(sl.member)||{}).name:""};
+  if(pSheet&&pSheet.kind==="item"&&item(pSheet.code)){itemSheet(body,item(pSheet.code),dept);return}
+  if(pSheet&&pSheet.kind==="role"){roleSheet(body,pSheet.deg,pSheet.role,{crewView:!!dept,who:castIn(pSheet.role)});return}
+  const pullRows=codes=>codes.map(c=>{const i=item(c),bad=!OK.includes(i.status);return `<li class="pick-row" data-pitem="${c}" tabindex="0" role="button" aria-label="Open ${esc(i.name)}">${chip(i.status)}<span class="small"><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HV</span>':""}<br><span class="muted">${esc(i.location)}</span></span>${bad?'<span class="gap">GAP</span>':i.status==="Ready"&&!i.high?`<button class="btn" data-ppull="${c}">Pull</button>`:"<span></span>"}</li>`}).join("");
+  const bindRows=()=>{body.querySelectorAll("[data-pitem]").forEach(r=>{const go=e=>{if(e.target.closest("[data-ppull]"))return;openSheet({kind:"item",code:r.dataset.pitem})};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter"){go(e)}}});
+    body.querySelectorAll("[data-ppull]").forEach(b=>b.onclick=e=>{e.stopPropagation();const i=item(b.dataset.ppull);act(i,"Pulled",`Pulled for ${nextProd.name} · ${nextProd.degree}`,pname(pp));toast(i.code+" pulled");render()});
+    body.querySelectorAll("[data-prole]").forEach(b=>b.onclick=()=>openSheet({kind:"role",deg:nextProd.degree,role:b.dataset.prole}))};
+  const roleList=()=>`<div class="pcard"><h3>Dress the cast · ${nextProd.degree}</h3>${(KITS[nextProd.degree]||[]).map(r=>`<button class="prole" data-prole="${esc(r.role)}"><span><b>${esc(r.role)}</b><br><span class="small muted">${castIn(r.role)?esc(castIn(r.role)):"Not cast yet"} · ${rolePieces(nextProd.degree,r.role).length} pieces</span></span><span aria-hidden="true">›</span></button>`).join("")}</div>`;
   if(pTab==="today"){
     const myRole=["Crew","Cast","All"].filter(w=>isSM||(isCast?w!=="Crew":w!=="Cast"));
     const slot=m&&S.slots.find(x=>x.member===m.id&&x.status!=="Open");
-    const gapsMine=dept?gaps(nextProd).filter(i=>i.dept===dept):[];
-    body.innerHTML=`${m?`<div class="pcard"><h3>Check-in</h3>${m.checkedIn?`<span class="st st-Ready">Checked in</span>`:`<button class="btn primary" id="pCheck">I'm here: check in (+${POINTS.checkin} pts)</button>`}</div>`:""}
-      ${isCast&&slot?`<div class="pcard"><h3>Your role</h3><b>${esc(slot.role)} · ${esc(prodName(slot.prod))}</b><span class="small">${slot.status==="Confirmed"?"Confirmed by the director":"Signed up, waiting for the director to confirm"}</span><span class="small muted">Report to wardrobe at crew call; your costume is pulled to your size.</span></div>`:""}
+    const mine=dept?kitCodes(nextProd).filter(c=>item(c).dept===dept).map(item):[];
+    const done=mine.filter(i=>OUT.includes(i.status)).length, gapsMine=mine.filter(i=>!OK.includes(i.status));
+    body.innerHTML=`${m?`<div class="pcard prow1"><span><h3>Check-in</h3>${m.checkedIn?'<span class="small">You\'re checked in.</span>':`<span class="small muted">+${POINTS.checkin} points</span>`}</span>${m.checkedIn?`<span class="st st-Ready">Checked in</span>`:`<button class="btn primary" id="pCheck">I'm here</button>`}</div>`:""}
+      ${dept?`<div class="pcard"><h3>Your pull list · ${esc(nextProd.name)} · ${nextProd.degree}</h3><div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="${mine.length}" aria-valuenow="${done}"><span style="width:${mine.length?Math.round(done/mine.length*100):0}%"></span></div><span class="small">${done} of ${mine.length} pulled${gapsMine.length?` · <span class="gap">${gapsMine.length} gap</span>`:""}</span><ul class="pull">${pullRows(mine.filter(i=>!OUT.includes(i.status)).slice(0,3).map(i=>i.code))}</ul><button class="btn" data-ptab-go="kit" style="align-self:flex-start">Whole pull list</button></div>`:""}
+      ${dept==="Wardrobe"?roleList():""}
+      ${isCast&&slot?(()=>{const p=S.productions.find(x=>x.id===slot.prod);return `<div class="pcard"><h3>Your role</h3><b>${esc(slot.role)} · ${esc(prodName(slot.prod))}</b><span class="small">${slot.status==="Confirmed"?"Confirmed by the director":"Signed up, waiting for the director to confirm"}</span><button class="btn primary" data-ptab-go="kit" style="align-self:flex-start">See my costume in 3D</button></div>`})():""}
       ${isCast&&!slot?`<div class="pcard"><h3>Open roles</h3>${S.slots.filter(x=>x.status==="Open").slice(0,3).map(x=>`<div class="row" style="justify-content:space-between"><span class="small">${esc(x.role)} · ${esc(prodName(x.prod))}</span><button class="btn" data-signup="${x.id}">Sign up</button></div>`).join("")||'<span class="small muted">All roles are filled.</span>'}</div>`:""}
-      ${dept?`<div class="pcard"><h3>Next production</h3><b>${esc(nextProd.name)} · ${nextProd.degree}</b><span class="small">${kitCodes(nextProd).filter(c=>item(c).dept===dept).length} ${dept.toLowerCase()} pieces to pull${gapsMine.length?` · <span class="gap">${gapsMine.length} gap</span>`:""}</span><button class="btn" data-ptab-go="kit" style="align-self:flex-start">Open pull list</button></div>`:""}
       <div class="pcard"><h3>Today's schedule</h3><ul class="pull">${SCHEDULE[0].items.filter(i=>myRole.includes(i[2])||(isSM&&i[2]==="Candidates")).map(i=>`<li><span class="code">${i[0]}</span><span class="small">${esc(i[1])}</span><span></span></li>`).join("")}</ul></div>`;
     const ck=$("#pCheck",body); if(ck) ck.onclick=()=>{m.checkedIn=true;award(m.id,POINTS.checkin,"Checked in at the Fall Reunion");toast("Checked in · +"+POINTS.checkin+" points");render()};
     body.querySelectorAll("[data-signup]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.signup);sl.member=m.id;sl.status="Signed up";save();toast("Signed up for "+sl.role+" · the director will confirm");render()});
     body.querySelectorAll("[data-ptab-go]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptabGo;render()});
+    bindRows();
   } else if(pTab==="scan"){
-    body.innerHTML=`<div class="pcard"><h3>Scan a tag</h3>${camBtn()}<form class="scanfield" id="pScanF"><input id="pScanI" autocomplete="off" placeholder="Code on the tag" aria-label="Item code"><button class="btn primary">Find</button></form>
-      <div class="quick">${S.items.filter(i=>i.dept===dept).map(i=>`<button type="button" data-pscan="${i.code}">${i.code.replace("DEMO-","")}</button>`).join("")}</div></div><div id="pScanOut"></div>`;
+    body.innerHTML=`<div class="pcard pscan"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS.scan}</svg><b>Scan a tag</b><span class="small muted">Snap the QR on the tag. The piece opens with where it lives and how it's worn.</span>${camBtn("Open camera")}</div>
+      <div class="pcard"><h3>Or type the code</h3><form class="scanfield" id="pScanF"><input id="pScanI" autocomplete="off" placeholder="DEMO-WR-001" aria-label="Item code"><button class="btn primary">Find</button></form>
+      <span class="small muted">Demo: tap a tag to simulate a scan</span><div class="quick">${S.items.filter(i=>i.dept===dept).map(i=>`<button type="button" data-pscan="${i.code}">${i.code.replace("DEMO-","")}</button>`).join("")}</div></div><div id="pScanOut"></div>`;
     const show=code=>{const i=item(String(code).trim().toUpperCase()),out=$("#pScanOut",body);
       if(!i){out.innerHTML=`<div class="banner bad">No piece with that code.</div>`;return}
       if(i.dept!==dept){out.innerHTML=`<div class="banner bad">${i.code} belongs to the ${i.dept} crew.</div>`;return}
-      out.innerHTML=`<div class="pcard ${i.high?"hv-card":""}" id="pScanCard"><span class="code muted">${i.code}</span><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small muted">${esc(i.location)} · size ${esc(i.size)}</span>${actionsFor(i,"s")}</div>`;
-      bindActions($("#pScanCard",body),i,()=>show(i.code))};
+      openSheet({kind:"item",code:i.code})};
     $("#pScanF",body).addEventListener("submit",e=>{e.preventDefault();show($("#pScanI",body).value)});
     bindCam(body,show);
     body.querySelectorAll("[data-pscan]").forEach(b=>b.onclick=()=>show(b.dataset.pscan));
@@ -1115,15 +1224,13 @@ function crewApp(el){
     if(isCast){
       const slot=m&&S.slots.find(x=>x.member===m.id&&x.status!=="Open");
       if(!slot){body.innerHTML=`<div class="pcard"><span class="small">No role yet. Sign up for an open role on the Today tab.</span></div>`}
-      else{const p=S.productions.find(x=>x.id===slot.prod), kit=(KITS[p.degree]||[]).find(r=>r.role===slot.role);
-        const pieces=(kit?kit.items:[]).map(item).filter(i=>i.dept==="Wardrobe").sort((a,b)=>LAYER_ORDER.indexOf(a.type)-LAYER_ORDER.indexOf(b.type));
-        body.innerHTML=`<div class="pcard"><h3>${esc(slot.role)} · ${p.degree}</h3><span class="small muted">The wardrobe crew dresses you in this order. Nothing to bring.</span><ol class="steps">${pieces.map(i=>`<li><span><b>${esc(i.name)}</b><br><span class="small">${esc(DRESS[i.type]||"")}</span></span></li>`).join("")}</ol></div>`}
+      else{const p=S.productions.find(x=>x.id===slot.prod); roleSheet(body,p.degree,slot.role,{back:false})}
     } else if(isSM){
       body.innerHTML=S.productions.map(p=>`<div class="pcard"><b>${esc(p.name)} · ${p.degree}</b><div class="row">${chip(p.stage==="Reset"?"Ready":p.stage==="Planning"?"Retired":"In use").replace(/>[^<]*<\/span>$/,">"+esc(p.stage)+"</span>")}${gaps(p).length?`<span class="gap">${gaps(p).length} kit gap</span>`:""}</div><span class="small muted">${S.slots.filter(x=>x.prod===p.id&&x.member).length}/${S.slots.filter(x=>x.prod===p.id).length} cast</span></div>`).join("");
     } else {
       const codes=kitCodes(nextProd).filter(c=>item(c).dept===dept);
-      body.innerHTML=`<div class="pcard"><h3>${esc(nextProd.name)} · ${nextProd.degree}</h3><ul class="pull">${codes.map(c=>{const i=item(c),bad=!["Ready","Pulled","In use"].includes(i.status);return `<li>${chip(i.status)}<span class="small"><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HV</span>':""}<br><span class="muted">${esc(i.location)}</span></span>${bad?'<span class="gap">GAP</span>':i.status==="Ready"&&!i.high?`<button class="btn" data-ppull="${c}">Pull</button>`:"<span></span>"}</li>`}).join("")||'<li class="small muted">Nothing for your crew in this production.</li>'}</ul></div>`;
-      body.querySelectorAll("[data-ppull]").forEach(b=>b.onclick=()=>{const i=item(b.dataset.ppull);act(i,"Pulled",`Pulled for ${nextProd.name} · ${nextProd.degree}`,pname(pp));toast(i.code+" pulled");render()});
+      body.innerHTML=`<div class="pcard"><h3>${esc(nextProd.name)} · ${nextProd.degree}</h3><span class="small muted">Tap a piece to see where it is${dept==="Wardrobe"?" and how it's worn":" and where it goes on stage"}.</span><ul class="pull">${pullRows(codes)||'<li class="small muted">Nothing for your crew in this production.</li>'}</ul></div>${dept==="Wardrobe"?roleList():""}`;
+      bindRows();
     }
   } else if(pTab==="radio"){
     intercomPanel(body);
