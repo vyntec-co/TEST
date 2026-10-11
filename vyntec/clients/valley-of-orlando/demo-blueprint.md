@@ -50,7 +50,7 @@ Seed: `clients/test-lab/backups/VT-875-valley-demo-seed.json` (22 records: 10 wa
 3. Open the Wardrobe & Props Guide → role lesson → dressing steps with item codes.
 4. 3D: rotate the stage, switch scene, tap the lantern → "In Repair, Props Shelf 3".
 5. Return a mask → condition → it lands in "Not ready" until cleaned.
-6. Close: one login for both crews, same account as their members, events and dues.
+6. Close: vyntec is an operational CRM. The Valley runs its productions here — inventory, crews, pull lists, dressing guides — in the same system as its members, events and dues, with one login.
 
 ## 6. Not in the demo
 Real inventory, real staging, real ritual text; user invites; automatic alerts (phase 2); paid 3D generation (budget 0).

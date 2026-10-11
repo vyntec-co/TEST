@@ -19,6 +19,7 @@ Before client work: read `clients/<slug>/CLAUDE.md` (or run `/client <slug>`). B
 - **Failure:** a tool call that fails is retried at most 2 times. Then stop, mark the item NEEDS HUMAN with the error, and move on. No loops.
 
 ## vyntec business rules
+- **Positioning (Vinny, 2026-10-11):** vyntec is an **operational CRM**: the system an organization runs its daily operations on (inventory, productions, crews, members, dues, bookings), not only a sales and marketing tool. Proposals, demos and content lead with the operations it runs.
 - **Pricing floor:** vyntec sells full operating-system builds, minimum $500/month.
 - **No feature upselling:** features are never priced, sold or upsold individually. Platform improvements fold into the client's existing package at no extra charge.
 - **HIPAA is the one cost-plus exception:** a capability with a fixed monthly cost to vyntec is priced as cost plus margin (line item or a higher monthly rate), and HIPAA needs business associate agreements in place before any patient data enters the system.
