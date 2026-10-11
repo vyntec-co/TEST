@@ -82,6 +82,8 @@ button{cursor:pointer}
 .vadev{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
 .chev{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2}
 .vamenu{position:absolute;right:0;top:calc(100% + 6px);width:min(340px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:6px;z-index:30;max-height:calc(100vh - 120px);overflow-y:auto}
+.vamenu .vatop{display:none}
+.va-open .tabbar{visibility:hidden}
 .vamenu .vahead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 10px 4px}
 .vamenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:8px}
 .vamenu button:hover,.vamenu button:focus-visible{background:var(--sunk)}
@@ -291,7 +293,9 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
   .tabbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .tabbar .nbadge{position:absolute;top:3px;left:calc(50% + 6px);margin:0;min-width:17px;height:17px;font-size:10px;padding:0 4px}
   .main{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))}
-  .top{position:static;padding-inline:16px}
+  .top{position:static;padding-inline:16px;row-gap:10px}.top .iconbtn{margin-left:auto;order:2}.viewas{order:3;flex:1 1 100%;min-width:0}.top .spacer{display:none}.vabtn{width:100%}.vatxt{flex:1}
+  .vamenu{position:fixed;left:0;right:0;top:auto;bottom:0;width:auto;max-height:82vh;max-height:82dvh;border-radius:18px 18px 0 0;padding:4px 10px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 0 0 100vmax rgba(10,12,16,.45),0 -10px 40px rgba(0,0,0,.25)}
+  .vamenu .vatop{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);padding:10px 8px 6px;z-index:1}.vamenu .vatop button{width:auto;padding:6px 12px;border:1px solid var(--line)}
   .view{padding-inline:16px}
   .g2{grid-template-columns:minmax(0,1fr)}
 }
@@ -1387,13 +1391,14 @@ function viewAsLabel(){
 }
 function viewAsMenu(){
   const tick='<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
-  $("#vaMenu").innerHTML=`<div class="vahead">Office screens · desktop</div>${OFFICE_AS.map(([k,l,d,ic])=>`<button type="button" role="menuitemradio" aria-checked="${mode==="office"&&crew===k}" data-as-crew="${k}"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${ic}</svg></span><span class="t"><b>${l}</b><span>${d}</span></span>${tick}</button>`).join("")}
+  $("#vaMenu").innerHTML=`<div class="vatop"><b>Viewing as</b><button type="button" class="btn" data-va-close>Close</button></div><div class="vahead">Office screens · desktop</div>${OFFICE_AS.map(([k,l,d,ic])=>`<button type="button" role="menuitemradio" aria-checked="${mode==="office"&&crew===k}" data-as-crew="${k}"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${ic}</svg></span><span class="t"><b>${l}</b><span>${d}</span></span>${tick}</button>`).join("")}
     <div class="vahead">Crew app · what each person sees on their phone</div>${PERSONAS.map(x=>`<button type="button" role="menuitemradio" aria-checked="${mode==="crew"&&personaId===x.id}" data-as-person="${x.id}"><span class="ic" aria-hidden="true">${initials(pname(x))}</span><span class="t"><b>${esc(pname(x))}</b><span>${x.role}</span></span>${tick}</button>`).join("")}`;
 }
-function menuOpen(open){const m=$("#vaMenu"),b=$("#vaBtn");if(open)viewAsMenu();m.hidden=!open;b.setAttribute("aria-expanded",String(open));if(open)(m.querySelector('[aria-checked="true"]')||m.querySelector("button")).focus()}
+function menuOpen(open){const m=$("#vaMenu"),b=$("#vaBtn");if(open)viewAsMenu();m.hidden=!open;document.body.classList.toggle("va-open",open);b.setAttribute("aria-expanded",String(open));if(open){const r=b.getBoundingClientRect();m.style.maxHeight=innerWidth>760?Math.max(220,innerHeight-r.bottom-16)+"px":""}if(open)(m.querySelector('[aria-checked="true"]')||m.querySelector("button")).focus()}
 $("#vaBtn").addEventListener("click",()=>menuOpen($("#vaMenu").hidden));
 document.addEventListener("click",e=>{
   if(!e.target.closest(".viewas")&&!$("#vaMenu").hidden){menuOpen(false);return}
+  if(e.target.closest("[data-va-close]")){menuOpen(false);$("#vaBtn").focus();return}
   const c=e.target.closest("[data-as-crew]"), p=e.target.closest("[data-as-person]"); if(!c&&!p) return;
   if(c){mode="office";crew=c.dataset.asCrew}
   else{mode="crew";personaId=p.dataset.asPerson;pTab="today";pSheet=null;RADIO.ch=persona().ch;RADIO.dm=null}
