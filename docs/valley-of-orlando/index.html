@@ -1,0 +1,1369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<!-- Copy of vyntec/clients/valley-of-orlando/demo/valley-production-ops.html for GitHub Pages; regenerate from that file, do not edit here. -->
+</head>
+<body>
+<title>Valley Production Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: CRM app shell — dark nav rail + work area; every view is a working screen over one shared demo dataset */
+:root{
+  --bg:#f6f5f2; --surface:#ffffff; --sunk:#eeece7; --fg:#1c1a17; --muted:#5f5b54; --line:#e2ded6;
+  --nav:#1d1813; --nav-fg:#d2cbc0; --nav-active:#ffffff;
+  --accent:#7a4520; --accent-fg:#ffffff; --accent-soft:#f5ebe1; --gold:#d9a521;
+  --ok:#1f7a4a; --ok-soft:#e2f2e9; --warn:#9a6200; --warn-soft:#fbefd8; --info:#1f5fae; --info-soft:#e3edf9;
+  --clean:#6a46a8; --clean-soft:#eee7f8; --bad:#b3261e; --bad-soft:#fbe5e3; --off:#6d7280; --off-soft:#eceef2;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11100e; --surface:#1a1815; --sunk:#23201c; --fg:#ece8e1; --muted:#a39d93; --line:#34302a;
+  --nav:#0b0a08; --nav-fg:#b9b2a6; --nav-active:#ffffff;
+  --accent:#e2b546; --accent-fg:#1a1205; --accent-soft:#3a2e14; --gold:#e2b546;
+  --ok:#5fcf8f; --ok-soft:#173326; --warn:#e8b45a; --warn-soft:#3a2c12; --info:#7fb2f0; --info-soft:#16283f;
+  --clean:#b49cf0; --clean-soft:#2a2140; --bad:#f08a80; --bad-soft:#3d1a18; --off:#9aa1b0; --off-soft:#232730; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11100e; --surface:#1a1815; --sunk:#23201c; --fg:#ece8e1; --muted:#a39d93; --line:#34302a;
+  --nav:#0b0a08; --nav-fg:#b9b2a6; --nav-active:#ffffff;
+  --accent:#e2b546; --accent-fg:#1a1205; --accent-soft:#3a2e14; --gold:#e2b546;
+  --ok:#5fcf8f; --ok-soft:#173326; --warn:#e8b45a; --warn-soft:#3a2c12; --info:#7fb2f0; --info-soft:#16283f;
+  --clean:#b49cf0; --clean-soft:#2a2140; --bad:#f08a80; --bad-soft:#3d1a18; --off:#9aa1b0; --off-soft:#232730; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+label.cam{position:relative;overflow:hidden;cursor:pointer;justify-content:center;align-self:flex-start}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.code{font-family:var(--mono);font-size:.86em;letter-spacing:.01em}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+/* nav */
+.nav{background:var(--nav);color:var(--nav-fg);display:flex;flex-direction:column;gap:18px;padding:18px 14px;position:sticky;top:0;height:100vh}
+.brand{display:flex;flex-direction:column;gap:2px;padding:0 6px}
+.brand b{color:var(--nav-active);font-weight:800;letter-spacing:.02em;font-size:18px}
+.brand span{font-size:12px;line-height:1.35}
+.nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.nav button{width:100%;text-align:left;background:none;border:0;color:inherit;padding:9px 10px;border-radius:6px;display:flex;gap:10px;align-items:center;font-weight:500}
+.nav button:hover{background:rgba(255,255,255,.06)}
+.nav button[aria-current="page"]{background:rgba(255,255,255,.1);color:var(--nav-active)}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav .foot{margin-top:auto;font-size:12px;line-height:1.45;padding:0 6px;display:flex;flex-direction:column;gap:8px}
+.nav .foot button{width:auto;padding:6px 10px;border:1px solid rgba(255,255,255,.18);font-size:12.5px}
+/* main */
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:12px;padding-inline:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h1{font-size:19px;margin:0;font-weight:700;text-wrap:balance}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.demo{background:var(--accent-soft);color:var(--accent)}
+.spacer{flex:1}
+.clientlogo{display:block;width:100%;max-width:200px;margin-top:8px;border-radius:8px}
+.viewas{position:relative}
+.vabtn{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 10px 6px 6px;text-align:left;min-width:0}
+.vabtn:hover{border-color:var(--accent)}
+.vaav{width:32px;height:32px;flex:none;border-radius:50%;background:var(--accent);color:var(--accent-fg);display:grid;place-items:center;font-weight:700;font-size:12.5px}
+.vaav svg,.vamenu .ic svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vatxt{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.valbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.vatxt b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vadev{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.chev{width:16px;height:16px;stroke:var(--muted);fill:none;stroke-width:2}
+.vamenu{position:absolute;right:0;top:calc(100% + 6px);width:min(340px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.18);padding:6px;z-index:30;max-height:calc(100vh - 120px);overflow-y:auto}
+.vamenu .vahead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:10px 10px 4px}
+.vamenu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:8px}
+.vamenu button:hover,.vamenu button:focus-visible{background:var(--sunk)}
+.vamenu button[aria-checked="true"]{background:var(--accent-soft)}
+.vamenu .ic{width:30px;height:30px;flex:none;border-radius:50%;background:var(--sunk);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--fg)}
+.vamenu button[aria-checked="true"] .ic{background:var(--accent);color:var(--accent-fg)}
+.vamenu .t{display:flex;flex-direction:column;line-height:1.3;min-width:0;flex:1}
+.vamenu .t span{font-size:12.5px;color:var(--muted)}
+.vamenu .tick{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:2.4;visibility:hidden}
+.vamenu button[aria-checked="true"] .tick{visibility:visible}
+.iconbtn{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--fg)}
+.iconbtn:hover{border-color:var(--accent)}
+.iconbtn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.seg{display:inline-flex;background:var(--sunk);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.view{padding-inline:24px;padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel h2{font-size:15px;margin:0 0 10px;font-weight:700}
+.panel h3{font-size:13px;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g32{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+.tile{display:flex;flex-direction:column;gap:2px}
+.tile .n{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{color:var(--muted);font-size:13px}
+.tile.alert .n{color:var(--bad)}
+button.tile{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.tile:not(.panel).click{border:1px solid transparent;border-radius:10px;background:none;padding:8px}
+.tile.click:hover{border-color:var(--accent);background:var(--accent-soft)}
+.bar i.click{cursor:pointer}.bar i.click:hover{filter:brightness(1.15)}
+.legend button.click{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:2px 4px;border-radius:4px;display:inline-flex;align-items:center;gap:5px}.legend button.click:hover{background:var(--sunk)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.note{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:6px;padding:8px 10px}
+/* status chips */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-Ready{background:var(--ok-soft);color:var(--ok)}
+.st-Pulled{background:var(--warn-soft);color:var(--warn)}
+.st-In-use{background:var(--info-soft);color:var(--info)}
+.st-Cleaning{background:var(--clean-soft);color:var(--clean)}
+.st-Repair{background:var(--bad-soft);color:var(--bad)}
+.st-Retired{background:var(--off-soft);color:var(--off)}
+.hv{display:inline-flex;font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:var(--accent);color:var(--accent-fg)}
+.flag{display:inline-flex;font-size:11px;font-weight:800;padding:2px 6px;border-radius:4px;background:var(--bad);color:#fff}
+/* bars */
+.bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--sunk)}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend b{width:9px;height:9px;border-radius:2px;display:inline-block}
+/* tables */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th{position:sticky;top:0;background:var(--sunk);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:9px 10px;white-space:nowrap}
+td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--sunk)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type="search"],input[type="text"],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+input[type="search"]{flex:1 1 220px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 12px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,12,16,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:var(--surface);z-index:21;border-left:1px solid var(--line);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.drawer header{padding:16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.drawer header h2{margin:0;font-size:18px}
+.drawer .body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0;font-size:14px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.log li{border-left:2px solid var(--line);padding-left:10px}
+.log time{color:var(--muted);font-variant-numeric:tabular-nums}
+/* scan */
+.scanbox{display:flex;flex-direction:column;gap:12px}
+.scanfield{display:flex;gap:8px}
+.scanfield input{flex:1;font-family:var(--mono);font-size:18px;padding:12px 14px;letter-spacing:.04em}
+.itemcard{border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.itemcard.hv-card{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
+.itemcard h2{margin:0;font-size:20px}
+.ipic{margin:0;background:linear-gradient(180deg,var(--sunk),var(--surface));border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ipic img{display:block;width:100%;aspect-ratio:4/3;object-fit:contain}
+.ipic figcaption{font-size:11px;color:var(--muted);padding:4px 8px;border-top:1px solid var(--line)}
+.ipic.sm img{aspect-ratio:auto;height:130px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick button{font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:4px 8px}
+fieldset{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:0;display:flex;flex-wrap:wrap;gap:8px 16px}
+legend{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:0 4px}
+label.opt{display:inline-flex;gap:6px;align-items:center;font-size:14px}
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(180px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.col{background:var(--sunk);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.col h4{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.card b{font-size:14px}
+.card .row{gap:4px}
+.card .btn{padding:3px 8px;font-size:12.5px}
+.pull li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
+.pull{list-style:none;margin:0;padding:0}
+.pull li:first-child{border-top:0}
+.gap{color:var(--bad);font-weight:700;font-size:12px}
+/* guide + stage */
+.stagewrap{position:relative;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk);aspect-ratio:16/10;max-width:100%}
+.stagewrap canvas{display:block;width:100%;height:100%}
+.loading3d{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px;text-align:center;padding:16px}
+.pick-row{cursor:pointer;border-radius:6px;padding-inline:6px}
+.pick-row:hover{background:var(--sunk)}
+.pick-row.on{background:var(--accent-soft)}
+.pick-card{cursor:pointer}.pick-card:hover{border-color:var(--accent)}.pick-card.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+@media (min-width:981px){.sticky3d{position:sticky;top:calc(76px + env(safe-area-inset-top,0px));align-self:start}}
+.cardslot{position:sticky;top:calc(64px + env(safe-area-inset-top,0px));z-index:2;background:var(--surface)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px;border-radius:6px;border:1px solid transparent;counter-increment:s;cursor:pointer}
+.steps li::before{content:counter(s);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.steps li.on{background:var(--accent-soft);border-color:var(--accent)}
+.steps li.on::before{color:var(--accent)}
+.steps li.future{opacity:.55}
+input[type="range"]{width:100%;accent-color:var(--accent)}
+/* labels */
+.labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.label{background:#fff;color:#111;border:1px dashed #b9bdc7;border-radius:6px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;text-align:center}
+.label .qr{width:104px;height:104px;display:grid;place-items:center}
+.label .qr img,.label .qr canvas{width:104px!important;height:104px!important}
+.label b{font-family:var(--mono);font-size:12px}
+.label span{font-size:11.5px;line-height:1.3}
+/* crew app (phone) */
+.phonewrap{display:flex;justify-content:center;padding-block:8px 24px}
+.phone{width:390px;max-width:100%;height:780px;max-height:calc(100vh - 140px);min-height:560px;border:10px solid #0b0d12;border-radius:40px;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.phone .ptop{padding:14px 16px 10px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.phone .ptop b{font-size:17px}
+.phone .pbody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.phone .ptabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-top:1px solid var(--line);background:var(--surface)}
+.phone .ptabs button{border:0;background:none;padding:8px 2px 10px;font-size:11px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.phone .ptabs button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.phone .ptabs button[aria-current="page"]{color:var(--accent)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pcard h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.phone .ptop{flex-direction:row;align-items:center;gap:10px}
+.pav{width:38px;height:38px;flex:none;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
+.ppts{font-size:12px;font-weight:700;background:var(--accent-soft);color:var(--accent);padding:4px 8px;border-radius:999px;white-space:nowrap}
+.pback{align-self:flex-start;border:0;background:none;color:var(--accent);font-weight:700;font-size:14px;padding:2px 0;cursor:pointer}
+.p3d{position:relative;height:280px;flex:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--sunk)}
+.p3d canvas{display:block;width:100%;height:100%;touch-action:none}
+.pseg{display:flex}.pseg button{flex:1}
+.ploc{display:flex;gap:8px;align-items:flex-start;background:var(--sunk);border-radius:8px;padding:8px 10px}
+.ploc svg{width:20px;height:20px;flex:none;stroke:var(--accent);fill:none;stroke-width:2;margin-top:2px}
+.prow1{flex-direction:row;align-items:center;justify-content:space-between}
+.pbar{height:8px;border-radius:999px;background:var(--sunk);overflow:hidden}.pbar span{display:block;height:100%;background:var(--accent)}
+.prole{display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;cursor:pointer;font:inherit;color:inherit}
+.prole:hover{background:var(--sunk)}
+.pscan{align-items:center;text-align:center;padding:18px 12px}.pscan>svg{width:40px;height:40px;stroke:var(--accent);fill:none;stroke-width:1.6}
+.pscan label.cam{align-self:stretch;padding-block:12px;font-size:15px}
+@media (max-width:760px){.phone{border:0;border-radius:0;height:auto;max-height:none;min-height:calc(100vh - 120px);box-shadow:none;width:100%}.phonewrap{padding:0}}
+/* intercom */
+.ic{display:flex;flex-direction:column;gap:10px;min-height:0}
+.ic .chans{display:flex;gap:6px;flex-wrap:wrap}
+.ic .chans button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700}
+.ic .chans button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.ic .feed{list-style:none;margin:0;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--sunk);border-radius:10px;max-height:320px;min-height:160px;overflow-y:auto}
+.ic .feed li{background:var(--surface);border-radius:10px;padding:8px 10px;max-width:88%;font-size:14px}
+.ic .feed li.me{align-self:flex-end;background:var(--accent-soft)}
+.ic .feed li .who{font-size:12px;color:var(--muted);font-weight:600}
+.ic .quick button{font-family:var(--sans);font-size:13px;text-align:left}
+.ic .ptt{width:100%;border:0;border-radius:14px;padding:16px;font-weight:800;font-size:16px;background:var(--accent);color:var(--accent-fg);touch-action:none;user-select:none;-webkit-user-select:none}
+.ic .ptt.tx{background:var(--bad);animation:pulse 1s infinite}
+@keyframes pulse{50%{filter:brightness(1.2)}}
+.ic .live{font-size:12px;font-weight:700;display:inline-flex;gap:6px;align-items:center}
+.ic .live i{width:8px;height:8px;border-radius:50%;background:var(--off);display:inline-block}
+.ic .live.on i{background:var(--ok)}
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:14px;font-weight:600;z-index:40;max-width:calc(100% - 32px)}
+.banner{border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.banner.bad{background:var(--bad-soft);color:var(--bad)}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+/* responsive */
+@media (max-width:980px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g32{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .nav{position:sticky;top:0;height:auto;flex-direction:row;align-items:center;gap:10px;padding:10px 16px;overflow-x:auto;z-index:10}
+  .brand span,.nav .foot,.clientlogo{display:none}
+  .top{row-gap:10px}.top .iconbtn{margin-left:auto;order:2}.viewas{order:3;flex:1 1 100%;min-width:0}.top .spacer{display:none}.vabtn{width:100%}.vatxt{flex:1}.vamenu{left:0;right:0;width:auto}
+  .nav ul{flex-direction:row;gap:2px}
+  .nav button{padding:7px 9px;white-space:nowrap;font-size:13px}
+  .nav button .t{display:none}
+  .nav button[aria-current="page"] .t{display:inline}
+  .top{position:static;padding-inline:16px}
+  .view{padding-inline:16px}
+  .g2{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:420px){.g4{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.tile .n{font-size:24px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <nav class="nav" aria-label="Main">
+    <div class="brand"><b>vyntec</b><span>Production Operations, prepared for</span><img class="clientlogo" src="data:image/jpeg;base64,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" alt="Orlando Scottish Rite, Valley of Orlando"></div>
+    <ul id="navlist"></ul>
+    <div class="foot">
+      <span>Demo by vyntec with sample data. Not an official Valley of Orlando page. In the live system this runs inside the Valley's own link.vyntec.co account.</span>
+      <button type="button" id="resetBtn">Reset demo data</button>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="top">
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="pill demo">DEMO · sample data</span>
+      <span class="spacer"></span>
+      <div class="viewas">
+        <button type="button" class="vabtn" id="vaBtn" aria-haspopup="menu" aria-expanded="false" aria-controls="vaMenu"><span class="vaav" id="vaAv" aria-hidden="true"></span><span class="vatxt"><span class="valbl">Viewing as</span><b id="vaName"></b></span><span class="vadev" id="vaDev"></span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="vamenu" id="vaMenu" role="menu" aria-label="Viewing as" hidden></div>
+      </div>
+      <button type="button" class="iconbtn" id="themeBtn"></button>
+    </div>
+    <main id="view" class="view"></main>
+  </div>
+</div>
+<div id="drawerHost"></div>
+<div id="toastHost"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+(function(){
+"use strict";
+const STATUSES = ["Ready","Pulled","In use","Cleaning","Repair","Retired"];
+const STATUS_VAR = {"Ready":"--ok","Pulled":"--warn","In use":"--info","Cleaning":"--clean","Repair":"--bad","Retired":"--off"};
+const STAGES = ["Planning","Pull","Dressed","Returned","Reset"];
+const LEADS = {Wardrobe:"Wardrobe lead (sample)", Props:"Props lead (sample)"};
+
+const SEED_ITEMS = [
+ ["DEMO-WR-001","Black robe","Wardrobe","Robe","4°","L","Wardrobe Rack A1","Ready","Good"],
+ ["DEMO-WR-002","Black robe","Wardrobe","Robe","4°","XL","Wardrobe Rack A1","Ready","Good"],
+ ["DEMO-WR-003","White tunic","Wardrobe","Tunic","14°","M","Wardrobe Rack A2","Cleaning","Needs cleaning"],
+ ["DEMO-WR-004","Red cape","Wardrobe","Cape","18°","One size","Wardrobe Rack B1","Ready","Good"],
+ ["DEMO-WR-005","Gold-trim collar","Wardrobe","Collar","18°","One size","Wardrobe Drawer C3","Ready","Good"],
+ ["DEMO-WR-006","Headdress","Wardrobe","Headpiece","32°","M","Wardrobe Shelf D2","Repair","Torn lining"],
+ ["DEMO-WR-007","Blue sash","Wardrobe","Sash","14°","One size","Wardrobe Drawer C1","Ready","Good"],
+ ["DEMO-WR-008","Long coat","Wardrobe","Coat","32°","L","Wardrobe Rack B2","Ready","Good"],
+ ["DEMO-WR-009","Sandals","Wardrobe","Footwear","4°","11","Wardrobe Bin E1","Ready","Worn"],
+ ["DEMO-WR-010","White gloves","Wardrobe","Gloves","18°","L","Wardrobe Bin E2","Ready","Good"],
+ ["DEMO-MK-001","Ceremonial mask 1","Wardrobe","Mask","32°","One size","Locked mask cabinet","Ready","Good",true,"[[insured value — Valley to confirm]]"],
+ ["DEMO-MK-002","Ceremonial mask 2","Wardrobe","Mask","32°","One size","Locked mask cabinet","Ready","Good",true,"[[insured value — Valley to confirm]]"],
+ ["DEMO-PR-001","Stage sword (blunt)","Props","Stage weapon","14°","-","Props Cage 1","Ready","Good"],
+ ["DEMO-PR-002","Stage sword (blunt)","Props","Stage weapon","14°","-","Props Cage 1","Ready","Good"],
+ ["DEMO-PR-003","Staff","Props","Hand prop","4°","-","Props Rack 2","Ready","Good"],
+ ["DEMO-PR-004","Lantern","Props","Hand prop","18°","-","Props Shelf 3","Repair","Cracked glass"],
+ ["DEMO-PR-005","Scroll","Props","Hand prop","32°","-","Props Shelf 3","Ready","Good"],
+ ["DEMO-PR-006","Chalice","Props","Hand prop","18°","-","Props Cabinet 4","Ready","Good"],
+ ["DEMO-PR-007","Throne chair","Props","Set piece","32°","-","Stage Storage Bay","Ready","Good"],
+ ["DEMO-PR-008","Altar cloth","Props","Set dressing","4°","-","Props Cabinet 4","Ready","Good"],
+ ["DEMO-PR-009","Banner","Props","Set dressing","14°","-","Props Rack 2","Ready","Faded"],
+ ["DEMO-PR-010","Candle stand","Props","Set piece","18°","-","Stage Storage Bay","Ready","Good"]
+];
+// Role kits per degree (sample roles; real roles come from the Valley's directors)
+const KITS = {
+ "4°":[{role:"Lead role",items:["DEMO-WR-001","DEMO-WR-009","DEMO-PR-003"]},{role:"Supporting role",items:["DEMO-WR-002","DEMO-PR-008"]}],
+ "14°":[{role:"Lead role",items:["DEMO-WR-003","DEMO-WR-007","DEMO-PR-001"]},{role:"Guard",items:["DEMO-PR-002","DEMO-PR-009"]}],
+ "18°":[{role:"Lead role",items:["DEMO-WR-004","DEMO-WR-005","DEMO-WR-010","DEMO-PR-006"]},{role:"Attendant",items:["DEMO-PR-004","DEMO-PR-010"]}],
+ "32°":[{role:"Lead role",items:["DEMO-WR-008","DEMO-WR-006","DEMO-MK-001","DEMO-PR-007"]},{role:"Masked figure",items:["DEMO-MK-002","DEMO-PR-005"]}]
+};
+const DRESS = {Robe:"Step into the robe and fasten it at the neck; hem should clear the floor by about an inch.",Tunic:"Pull the tunic over the head; seams to the sides, hem even all round.",Coat:"Put the coat on over the base layer; fasten every closure from the top.",Cape:"Drape the cape across both shoulders; fasten at the front so the fall is even at the back.",Sash:"Lay the sash over the left shoulder, cross to the right hip and tie or pin at the hip.",Collar:"Place the collar over the shoulders so the point sits centre front.",Gloves:"Gloves go on last before any hand prop is handed over.",Footwear:"Footwear first if the robe is long, so the hem can be checked standing.",Headpiece:"Seat the headpiece level; check the fit with the wardrobe crew before entrance.",Mask:"High-value: the wardrobe lead hands the mask over and fits it; the cast member never takes it from the cabinet."};
+const LAYER_ORDER = ["Footwear","Robe","Tunic","Coat","Cape","Sash","Collar","Gloves","Headpiece","Mask"];
+const STAGE_LAYOUT = {
+ "4°":[[{c:"DEMO-PR-008",x:0,z:-2.2},{c:"DEMO-PR-003",x:-2.5,z:0.5}],[{c:"DEMO-PR-008",x:0,z:-2.2},{c:"DEMO-PR-003",x:1.8,z:-0.8}]],
+ "14°":[[{c:"DEMO-PR-009",x:-3.4,z:-2.6},{c:"DEMO-PR-001",x:-1.2,z:0.4},{c:"DEMO-PR-002",x:1.2,z:0.4}],[{c:"DEMO-PR-009",x:3.4,z:-2.6},{c:"DEMO-PR-001",x:-0.6,z:-1.2},{c:"DEMO-PR-002",x:0.6,z:-1.2}]],
+ "18°":[[{c:"DEMO-PR-010",x:-1.6,z:-2.0},{c:"DEMO-PR-006",x:0,z:-1.4},{c:"DEMO-PR-004",x:2.6,z:0.8}],[{c:"DEMO-PR-010",x:1.6,z:-2.0},{c:"DEMO-PR-006",x:-0.8,z:0.2},{c:"DEMO-PR-004",x:-2.8,z:-0.6}]],
+ "32°":[[{c:"DEMO-PR-007",x:0,z:-2.6},{c:"DEMO-PR-005",x:2.2,z:-0.4}],[{c:"DEMO-PR-007",x:-2.4,z:-2.2},{c:"DEMO-PR-005",x:0.4,z:0.6}]]
+};
+// Sample people for the demo only (invented names, not Valley members)
+const MEMBERS=[["R. Alvarez",["Cast"],34],["T. Bennett",["Cast","Wardrobe crew"],52],["M. Chen",["Props crew"],41],["D. Okafor",["Cast"],18],["S. Patel",["Wardrobe crew"],27],["J. Romano",["Props crew"],63],["K. Walsh",["Cast"],22],["L. Nguyen",["Wardrobe crew","Cast"],12],["P. Harris",["Props crew"],9],["G. Moreno",["Cast"],45],["B. Fischer",["Reunion day volunteer"],15],["A. Coleman",["Reunion day volunteer","Props crew"],30]];
+const CANDS=[["C. Dunn","4°–14°","Confirmed","Lodge sponsor (sample)"],["H. Ortiz","4°–14°","Registered","Website form"],["W. Price","4°–32°","Confirmed","Lodge sponsor (sample)"],["F. Ibrahim","15°–18°","Registered","Website form"],["V. Kowalski","19°–32°","Checked in","Lodge sponsor (sample)"],["Y. Tanaka","4°–32°","Registered","Event table"],["Q. Rhodes","15°–18°","Confirmed","Website form"],["E. Lindqvist","19°–32°","Registered","Lodge sponsor (sample)"]];
+const CAND_STAGES=["Registered","Confirmed","Checked in","Conferred"];
+const POINTS={cast:10,crew:5,checkin:5,rehearsal:3};
+const SCHEDULE=[
+ {day:"Saturday, Nov 7 (sample)",items:[["6:30 AM","Crew call: wardrobe and props","Crew"],["7:15 AM","Volunteer and cast check-in opens","All"],["7:30 AM","Candidate registration and check-in","Candidates"],["8:30 AM","Opening and welcome","All"],["9:00 AM","4° production","Cast"],["10:45 AM","Reset: return and turn around 4° kit","Crew"],["11:15 AM","14° production","Cast"],["12:30 PM","Lunch","All"],["1:30 PM","Rehearsal for Sunday cast","Cast"],["4:00 PM","End-of-day inventory check","Crew"]]},
+ {day:"Sunday, Nov 8 (sample)",items:[["7:00 AM","Crew call: wardrobe and props","Crew"],["7:45 AM","Check-in","All"],["8:30 AM","18° production","Cast"],["10:30 AM","Reset: 18° kit","Crew"],["11:00 AM","32° production","Cast"],["1:00 PM","Class reception","All"],["2:30 PM","Final return and end-of-day check","Crew"]]}
+];
+const TEMPLATES=[
+ {id:"cast-confirm",name:"Cast confirmation",ch:"Email",aud:"Cast with a confirmed role",body:"Hi {first},\n\nThank you for taking the {role} in the {degree} on {date}. Crew call is {call}. Wardrobe will have your costume ready; nothing to bring.\n\nReply here if anything changes.\n\nValley of Orlando Reunion Committee"},
+ {id:"rehearsal",name:"Rehearsal reminder",ch:"SMS",aud:"Cast for Sunday",body:"Reminder: Sunday cast rehearsal Sat 1:30 PM. Reply STOP to opt out."},
+ {id:"crew-call",name:"Crew call",ch:"SMS",aud:"Wardrobe and props crew",body:"Crew call 6:30 AM Saturday. Pull lists are ready in the app."},
+ {id:"cand-welcome",name:"Candidate welcome and what to expect",ch:"Email",aud:"Registered and confirmed candidates",body:"Dear {first},\n\nWelcome to the Fall Reunion. Registration opens Saturday at 7:30 AM. Please bring your dues card. Your class: {degrees}.\n\nValley of Orlando Reunion Committee"},
+ {id:"thanks",name:"Thank you and points earned",ch:"Email",aud:"Everyone who served this reunion",body:"Hi {first},\n\nThank you for serving at the Fall Reunion. You earned {pts} volunteer points this reunion, {total} in total.\n\nValley of Orlando Reunion Committee"}
+];
+function seed(){
+  const now = Date.now();
+  return {
+    items: SEED_ITEMS.map(a=>({code:a[0],name:a[1],dept:a[2],type:a[3],degree:a[4],size:a[5],location:a[6],status:a[7],condition:a[8],high:!!a[9],value:a[10]||"",flag:false,log:[{t:now-864e5*3,by:"Import (demo)",text:"Tagged and added to inventory"}]})),
+    productions:[
+      {id:"P1",name:"Fall Reunion, Day 1",date:"Sat, Nov 7 (sample)",degree:"4°",stage:"Pull"},
+      {id:"P2",name:"Fall Reunion, Day 1",date:"Sat, Nov 7 (sample)",degree:"14°",stage:"Planning"},
+      {id:"P3",name:"Fall Reunion, Day 2",date:"Sun, Nov 8 (sample)",degree:"18°",stage:"Planning"},
+      {id:"P4",name:"Fall Reunion, Day 2",date:"Sun, Nov 8 (sample)",degree:"32°",stage:"Planning"}
+    ],
+    activity:[],
+    members: MEMBERS.map((m,k)=>({id:"MBR-"+String(k+1).padStart(3,"0"),name:m[0],interest:m[1],points:m[2],checkedIn:false,log:[{t:now-864e5*20,text:"Points carried over from last reunion",pts:m[2]}]})),
+    candidates: CANDS.map((c,k)=>({id:"CND-"+String(k+1).padStart(3,"0"),name:c[0],degrees:c[1],status:c[2],from:c[3]})),
+    slots: [],
+    queue: []
+  };
+}
+function seedSlots(st){
+  const pre={"P1-0":["MBR-001","Confirmed"],"P1-1":["MBR-004","Signed up"],"P2-0":["MBR-002","Confirmed"],"P3-0":["MBR-007","Signed up"],"P4-1":["MBR-010","Confirmed"]};
+  st.slots=[];st.productions.forEach(p=>(KITS[p.degree]||[]).forEach((r,k)=>{const id=p.id+"-"+k,a=pre[id];st.slots.push({id,prod:p.id,role:r.role,member:a?a[0]:null,status:a?a[1]:"Open"})}));
+  return st;
+}
+const KEY="vyntec-valley-demo-v2";
+let S;
+try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){ S=null }
+if(!S||!S.items||!S.members) S = seedSlots(seed());
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} }
+let crew = "All", view = "dashboard", openCode = null;
+let scanCode = "";
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const item = c=>S.items.find(i=>i.code===c);
+const visible = ()=>S.items.filter(i=>crew==="All"||i.dept===crew);
+const chip = s=>`<span class="st st-${s.replace(" ","-")}">${esc(s)}</span>`;
+const cssv = n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function when(t){const d=new Date(t);return d.toLocaleDateString([], {month:"short",day:"numeric"})+" "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}
+function toast(msg){const h=$("#toastHost");h.innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>h.innerHTML="",2600)}
+function act(it,status,text,by){
+  it.status=status; if(status==="Ready") it.flag=false;
+  const e={t:Date.now(),by:by||(crew==="All"?"Officer (demo)":crew+" crew (demo)"),text};
+  it.log.unshift(e); S.activity.unshift({...e,code:it.code,name:it.name}); S.activity=S.activity.slice(0,40);
+  save();
+}
+
+/* ---------- nav ---------- */
+const ICONS = {
+ dashboard:'<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 8h6V4h-6z"/>',
+ inventory:'<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+ scan:'<path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3"/><path d="M8 12h8"/>',
+ productions:'<path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v6h-4z"/>',
+ guide:'<circle cx="12" cy="5" r="2.2"/><path d="M8 21l1.5-9h5L16 21M9 12l-3 4M15 12l3 4M9.5 8.5h5"/>',
+ stage:'<path d="M3 20h18M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/>',
+ intercom:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14h4"/>',
+ room:'<path d="M4 6h16M6 6v14M18 6v14"/><path d="M9 6l1 3M13 6l1 3"/><path d="M8.5 9h3l.5 6h-4zM12.5 9h3l.5 6h-4z"/>',
+ labels:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>',
+ reunion:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
+ candidates:'<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2 8 12.7 4 8.8 9.5 8z"/>',
+ cast:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 11h4M19 9v4"/>',
+ points:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"/>',
+ messages:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'
+};
+const VIEWS = [["dashboard","Dashboard"],["reunion","Reunion"],["candidates","Degree sign-ups"],["cast","Cast sign-ups"],["productions","Productions"],["inventory","Inventory"],["scan","Scan"],["guide","Dressing guide"],["room","Wardrobe room"],["stage","Stage layout"],["labels","QR labels"],["points","Volunteer points"],["messages","Communications"],["intercom","Intercom"]];
+const HIDE={Wardrobe:["stage"],Props:["room","guide"]};
+const navViews=()=>VIEWS.filter(v=>!(HIDE[crew]||[]).includes(v[0]));
+function renderNav(){
+  if(!navViews().some(v=>v[0]===view)) view=crew==="Wardrobe"?"room":"stage";
+  $("#navlist").innerHTML = navViews().map(([k,l])=>`<li><button type="button" data-view="${k}" ${k===view?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span class="t">${l}</span></button></li>`).join("");
+}
+document.addEventListener("click",e=>{
+  const v=e.target.closest("[data-view]"); if(v){if(v.dataset.invs!==undefined){invS=v.dataset.invs;invQ="";invD=""} if(v.dataset.prod)selProd=v.dataset.prod; go(v.dataset.view);return}
+  const rm=e.target.closest("[data-room]"); if(rm){roomFocus=rm.dataset.room;closeDrawer();go("room");return}
+  const o=e.target.closest("[data-open]"); if(o){openItem(o.dataset.open);return}
+});
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[role=button][data-view],[role=button][data-open]")){e.preventDefault();e.target.click()}});
+function go(v){view=v;try{history.replaceState(null,"","#"+v)}catch(e){}render();window.scrollTo(0,0)}
+$("#resetBtn").addEventListener("click",()=>{S=seedSlots(seed());save();closeDrawer();render();toast("Demo data reset")});
+
+/* ---------- views ---------- */
+function render(){
+  const crewMode = mode==="crew";
+  document.querySelector(".nav").hidden = crewMode;
+  viewAsLabel();
+  document.querySelector(".app").style.gridTemplateColumns = crewMode ? "minmax(0,1fr)" : "";
+  if(crewMode){ stopLoops(); $("#viewTitle").textContent="Crew app"; $("#view").innerHTML=""; crewApp($("#view")); return }
+  renderNav();
+  $("#viewTitle").textContent = VIEWS.find(v=>v[0]===view)[1];
+  stopLoops();
+  const f = {dashboard,inventory,scan,productions,guide,stage,room,labels,reunion,candidates,cast,points,messages,intercom}[view];
+  $("#view").innerHTML = ""; f($("#view"));
+}
+
+function dashboard(el){
+  const its=visible(), n=s=>its.filter(i=>i.status===s).length;
+  const out=n("Pulled")+n("In use"), notReady=n("Cleaning")+n("Repair");
+  const masks=S.items.filter(i=>i.high), secured=masks.filter(i=>i.status==="Ready").length;
+  const flagged=its.filter(i=>i.flag).length;
+  const seg=(dept)=>{const a=S.items.filter(i=>i.dept===dept);return STATUSES.map(s=>{const k=a.filter(i=>i.status===s).length;return k?`<i class="click" data-view="inventory" data-invs="${s}" role="button" tabindex="0" aria-label="${s}: ${k}, open in inventory" style="width:${k/a.length*100}%;background:var(${STATUS_VAR[s]})" title="${s}: ${k}"></i>`:""}).join("")};
+  const next=S.productions.filter(p=>p.stage!=="Reset");
+  el.innerHTML=`
+  ${flagged?`<div class="banner bad"><b>${flagged} item${flagged>1?"s":""} not returned after the end-of-day check.</b> <button class="btn" data-view="productions">Open productions</button></div>`:""}
+  <div class="grid g4">
+    <button type="button" class="panel tile click" data-view="inventory" data-invs="Ready"><span class="n">${n("Ready")}</span><span class="l">Ready to pull</span></button>
+    <button type="button" class="panel tile click" data-view="inventory" data-invs="__out"><span class="n">${out}</span><span class="l">Out today (pulled or in use)</span></button>
+    <button type="button" class="panel tile click ${notReady?"alert":""}" data-view="inventory" data-invs="__notready"><span class="n">${notReady}</span><span class="l">Not ready (cleaning or repair)</span></button>
+    <button type="button" class="panel tile click ${secured<masks.length?"alert":""}" data-view="inventory" data-invs="__hv"><span class="n">${secured}/${masks.length}</span><span class="l">Masks in the locked cabinet</span></button>
+  </div>
+  <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Fall Reunion (sample)</h2><button class="btn" data-view="reunion">Open reunion</button></div>
+    <div class="grid g4" style="margin-top:12px">
+      <button type="button" class="tile click" data-view="candidates"><span class="n">${S.candidates.length}</span><span class="l">Candidates signed up · ${S.candidates.filter(c=>c.status!=="Registered").length} confirmed</span></button>
+      <button type="button" class="tile click" data-view="cast"><span class="n">${S.slots.filter(x=>x.member).length}/${S.slots.length}</span><span class="l">Cast roles filled</span></button>
+      <button type="button" class="tile click" data-view="reunion"><span class="n">${S.members.filter(m=>m.checkedIn).length}/${S.members.length}</span><span class="l">Volunteers checked in</span></button>
+      <button type="button" class="tile click" data-view="messages"><span class="n">${S.queue.length}</span><span class="l">Messages waiting for approval</span></button>
+    </div></div>
+  <div class="grid g32">
+    <div class="panel">
+      <h2>Inventory by status</h2>
+      ${["Wardrobe","Props"].filter(d=>crew==="All"||crew===d).map(d=>`<div style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><b class="small">${d}</b><span class="small muted">${S.items.filter(i=>i.dept===d).length} pieces in demo · about 300 in the real collection</span></div><div class="bar" style="margin-top:6px">${seg(d)}</div></div>`).join("")}
+      <div class="legend">${STATUSES.map(s=>`<button type="button" class="click" data-view="inventory" data-invs="${s}"><b style="background:var(${STATUS_VAR[s]})"></b>${s}</button>`).join("")}</div>
+    </div>
+    <div class="panel">
+      <h2>Upcoming productions</h2>
+      <ul class="pull">${next.map(p=>{const g=gaps(p).length;return `<li class="pick-row" data-view="productions" data-prod="${p.id}" role="button" tabindex="0"><span class="code">${esc(p.degree)}</span><span>${esc(p.name)}<br><span class="small muted">${esc(p.date)} · ${esc(p.stage)}</span></span>${g?`<span class="gap">${g} gap${g>1?"s":""}</span>`:`<span class="st st-Ready">Kit ready</span>`}</li>`}).join("")}</ul>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="panel"><h2>Needs attention</h2>${attention()}</div>
+    <div class="panel"><h2>Recent activity</h2>${S.activity.length?`<ul class="log">${S.activity.slice(0,8).map(a=>`<li ${a.code?`class="pick-row" data-open="${a.code}" role="button" tabindex="0"`:""}><time>${when(a.t)}</time> · ${a.code?`<button class="btn" style="padding:0 6px;font-size:12px" data-open="${a.code}">${a.code}</button> `:""}${esc(a.text)} <span class="muted">(${esc(a.by)})</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing yet. Scan a label to pull or return a piece, and it shows up here.</p>`}</div>
+  </div>`;
+}
+function attention(){
+  const its=visible().filter(i=>i.flag||i.status==="Repair"||i.status==="Cleaning"||(i.high&&i.status!=="Ready"));
+  if(!its.length) return `<p class="muted small" style="margin:0">Everything is back and ready.</p>`;
+  return `<ul class="pull">${its.map(i=>`<li class="pick-row" data-open="${i.code}" role="button" tabindex="0">${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-open="${i.code}">${i.code}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}<br><span class="small muted">${esc(i.condition)} · ${esc(i.location)}</span></span><span></span></li>`).join("")}</ul>`;
+}
+
+let invQ="", invS="", invD="";
+const INV_GROUPS={__out:["Out today (pulled or in use)",i=>i.status==="Pulled"||i.status==="In use"],__notready:["Not ready (cleaning or repair)",i=>i.status==="Cleaning"||i.status==="Repair"],__hv:["High value (masks)",i=>i.high]};
+function inventory(el){
+  const degs=[...new Set(S.items.map(i=>i.degree))];
+  el.innerHTML=`
+  <div class="filters">
+    <input type="search" id="invQ" placeholder="Search code, name, location" value="${esc(invQ)}" aria-label="Search inventory">
+    <select id="invS" aria-label="Status"><option value="">All statuses</option>${Object.entries(INV_GROUPS).map(([k,g])=>`<option value="${k}" ${k===invS?"selected":""}>${g[0]}</option>`).join("")}${STATUSES.map(s=>`<option ${s===invS?"selected":""}>${s}</option>`).join("")}</select>
+    <select id="invD" aria-label="Degree"><option value="">All degrees</option>${degs.map(d=>`<option ${d===invD?"selected":""}>${d}</option>`).join("")}</select>
+    <span class="small muted" id="invCount"></span>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th>Code</th><th>Item</th><th>Crew</th><th>Type</th><th>Degree</th><th>Size</th><th>Location</th><th>Status</th><th>Condition</th></tr></thead><tbody id="invBody"></tbody></table></div>
+  <p class="note">In the live system this is the Valley's Inventory Item object inside their account: the same list, filters and record pages, with the crew's own saved views.</p>`;
+  const draw=()=>{
+    const q=invQ.toLowerCase();
+    const rows=visible().filter(i=>(!invS||(INV_GROUPS[invS]?INV_GROUPS[invS][1](i):i.status===invS))&&(!invD||i.degree===invD)&&(!q||(i.code+" "+i.name+" "+i.location+" "+i.type).toLowerCase().includes(q)));
+    $("#invBody").innerHTML=rows.map(i=>`<tr data-open="${i.code}" tabindex="0"><td class="code">${i.code}</td><td><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</td><td>${i.dept}</td><td>${esc(i.type)}</td><td>${i.degree}</td><td>${esc(i.size)}</td><td>${esc(i.location)}</td><td>${chip(i.status)}</td><td>${esc(i.condition)}</td></tr>`).join("")||`<tr><td colspan="9" class="muted">No pieces match these filters.</td></tr>`;
+    $("#invCount").textContent=rows.length+" of "+visible().length+" pieces";
+  };
+  $("#invQ").addEventListener("input",e=>{invQ=e.target.value;draw()});
+  $("#invS").addEventListener("change",e=>{invS=e.target.value;draw()});
+  $("#invD").addEventListener("change",e=>{invD=e.target.value;draw()});
+  $("#invBody").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.open)openItem(e.target.dataset.open)});
+  draw();
+}
+
+/* ---------- item drawer ---------- */
+function openItem(code){
+  const i=item(code); if(!i) return; openCode=code;
+  $("#drawerHost").innerHTML=`<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(i.name)}">
+    <header><div style="flex:1;min-width:0"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2><div class="row" style="margin-top:6px">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</div></div><button class="btn" id="closeD" aria-label="Close">Close</button></header>
+    <div class="body">
+      ${picHtml(i)}
+      <dl class="kv"><dt>Crew</dt><dd>${i.dept}</dd><dt>Type</dt><dd>${esc(i.type)}</dd><dt>Degree</dt><dd>${i.degree}</dd><dt>Size</dt><dd>${esc(i.size)}</dd><dt>Location</dt><dd>${esc(i.location)}</dd><dt>Condition</dt><dd>${esc(i.condition)}</dd>${i.high?`<dt>Insured value</dt><dd>${esc(i.value)}</dd><dt>Sign-out</dt><dd>${LEADS.Wardrobe} only</dd>`:""}</dl>
+      ${i.dept==="Wardrobe"?`<button class="btn" data-room="${i.code}" style="align-self:flex-start">Show in wardrobe room</button>`:""}
+      <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Actions</h3>${actionsFor(i,"d")}</div>
+      <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">History</h3><ul class="log">${i.log.map(l=>`<li><time>${when(l.t)}</time> · ${esc(l.text)} <span class="muted">(${esc(l.by)})</span></li>`).join("")}</ul></div>
+    </div></aside>`;
+  $("#scrim").onclick=closeDrawer; $("#closeD").onclick=closeDrawer;
+  bindActions($("#drawerHost"),i,()=>{openItem(code);render()});
+  $("#closeD").focus();
+}
+function closeDrawer(){openCode=null;$("#drawerHost").innerHTML=""}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openCode)closeDrawer()});
+
+function actionsFor(i,p){
+  const prodOpts=S.productions.filter(x=>x.stage!=="Reset").map(x=>`<option value="${x.id}">${esc(x.name)} · ${x.degree}</option>`).join("");
+  if(i.status==="Ready") return `<div class="scanbox">
+     <label class="small">For production <select id="${p}prod">${prodOpts}</select></label>
+     ${i.high?`<label class="opt"><input type="checkbox" id="${p}lead"> Signed out by the ${LEADS.Wardrobe.replace(" (sample)","")}</label>`:""}
+     <div class="row"><button class="btn primary" data-a="pull">Mark pulled</button></div></div>`;
+  if(i.status==="Pulled") return `<div class="row"><button class="btn primary" data-a="use">Mark in use (dressed / on stage)</button><button class="btn" data-a="back">Put back, not used</button></div>`;
+  if(i.status==="In use") return `<div class="scanbox"><fieldset><legend>Condition on return</legend>
+      <label class="opt"><input type="radio" name="${p}cond" value="ok" checked> Good</label>
+      <label class="opt"><input type="radio" name="${p}cond" value="clean"> Needs cleaning</label>
+      <label class="opt"><input type="radio" name="${p}cond" value="repair"> Needs repair</label></fieldset>
+      ${i.high?`<label class="opt"><input type="checkbox" id="${p}photo"> Return photo taken and checked by the wardrobe lead</label>`:""}
+      <input type="text" id="${p}note" placeholder="Note (optional), e.g. loose clasp">
+      <div class="row"><button class="btn primary" data-a="return">Mark returned</button></div></div>`;
+  if(i.status==="Cleaning"||i.status==="Repair") return `<div class="row"><button class="btn primary" data-a="ready">${i.status==="Cleaning"?"Cleaned":"Repaired"}: mark ready</button><button class="btn danger" data-a="retire">Retire piece</button></div>`;
+  return `<p class="small muted" style="margin:0">Retired pieces stay on record for history.</p>`;
+}
+function bindActions(root,i,after){
+  root.querySelectorAll("[data-a]").forEach(b=>b.addEventListener("click",()=>{
+    const a=b.dataset.a, p=root.id==="drawerHost"?"d":"s";
+    if(a==="pull"){
+      if(i.high&&!$("#"+p+"lead",root).checked){toast("High-value: the wardrobe lead must sign this mask out");return}
+      const pr=S.productions.find(x=>x.id===$("#"+p+"prod",root).value);
+      act(i,"Pulled",`Pulled for ${pr?pr.name+" · "+pr.degree:"production"}`+(i.high?" · signed out by the wardrobe lead":""));toast(i.code+" pulled");
+    }else if(a==="use"){act(i,"In use","Dressed / on stage");toast(i.code+" in use")}
+    else if(a==="back"){act(i,"Ready","Put back unused");toast(i.code+" back on the shelf")}
+    else if(a==="return"){
+      if(i.high&&!$("#"+p+"photo",root).checked){toast("High-value: take and check the return photo first");return}
+      const c=root.querySelector(`input[name="${p}cond"]:checked`).value, note=$("#"+p+"note",root).value.trim();
+      const map={ok:["Ready","Good"],clean:["Cleaning","Needs cleaning"],repair:["Repair",note||"Needs repair"]};
+      i.condition=map[c][1]; act(i,map[c][0],"Returned · "+map[c][1]+(note&&c!=="repair"?" · "+note:"")+(i.high?" · return photo checked":""));
+      toast(map[c][0]==="Ready"?i.code+" returned and ready":i.code+" returned, now "+map[c][0].toLowerCase());
+    }else if(a==="ready"){i.condition="Good";act(i,"Ready",(i.status==="Cleaning"?"Cleaned":"Repaired")+", back to ready");toast(i.code+" ready")}
+    else if(a==="retire"){act(i,"Retired","Retired from use");toast(i.code+" retired")}
+    after();
+  }));
+}
+
+/* ---------- scan ---------- */
+/* shortcut: photo snap, not a live viewfinder (the artifact frame refuses live camera streams), upgrade when the demo runs top-level or in the platform app */
+const camBtn=(label="Scan with camera")=>`<label class="btn primary cam">${label}<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden"></label>`;
+function bindCam(root,onCode){
+  root.querySelectorAll("label.cam input").forEach(inp=>inp.addEventListener("change",()=>{
+    const f=inp.files&&inp.files[0]; inp.value=""; if(!f) return;
+    if(typeof jsQR!=="function"){toast("The QR reader didn't load. Type the code instead.");return}
+    const img=new Image(), url=URL.createObjectURL(f);
+    img.onload=()=>{URL.revokeObjectURL(url);
+      const k=Math.min(1,1024/Math.max(img.width,img.height)), c=document.createElement("canvas");
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      const x=c.getContext("2d"); x.drawImage(img,0,0,c.width,c.height);
+      const r=jsQR(x.getImageData(0,0,c.width,c.height).data,c.width,c.height);
+      if(r&&r.data) onCode(r.data.trim()); else toast("No QR code found in that photo. Fill the frame with the tag and try again.")};
+    img.onerror=()=>{URL.revokeObjectURL(url);toast("Couldn't read that photo.")};
+    img.src=url}));
+}
+function scan(el){
+  const its=visible();
+  el.innerHTML=`<div class="grid g32">
+   <div class="panel scanbox">
+     <h2>Scan a label</h2>
+     <p class="small muted" style="margin:0">Tap <b>Scan with camera</b> and snap the tag's QR, use a handheld scanner (it types the code and presses Enter), or type a code.</p>
+     ${camBtn()}
+     <form class="scanfield" id="scanForm"><input id="scanIn" autocomplete="off" placeholder="DEMO-WR-001" value="${esc(scanCode)}" aria-label="Item code"><button class="btn primary">Find</button></form>
+     <div><span class="small muted">Tap to simulate a scan:</span><div class="quick" style="margin-top:6px">${its.map(i=>`<button type="button" data-scan="${i.code}">${i.code}</button>`).join("")}</div></div>
+   </div>
+   <div id="scanResult"></div></div>`;
+  const show=(code)=>{
+    scanCode=code;
+    const i=item(code.trim().toUpperCase()), host=$("#scanResult");
+    if(!code){host.innerHTML=`<div class="panel"><p class="muted" style="margin:0">Scan or type a code and the piece appears here with the next step for it.</p></div>`;return}
+    if(!i){host.innerHTML=`<div class="banner bad">No piece with code “${esc(code)}”. Check the tag, or add it as a new piece during tagging.</div>`;return}
+    if(crew!=="All"&&i.dept!==crew){host.innerHTML=`<div class="banner bad">${esc(i.code)} belongs to the ${i.dept} crew. Hand it to them.</div>`;return}
+    host.innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" id="scanCard"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2>${picHtml(i)}<div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} <span class="small muted">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span></div>${actionsFor(i,"s")}<button class="btn" data-open="${i.code}" style="align-self:flex-start">Open full record</button></div>`;
+    host.id="scanResult";
+    const card=$("#scanCard"); card.id="scanHost";
+    bindActions(card,i,()=>{show(i.code)});
+  };
+  $("#scanForm").addEventListener("submit",e=>{e.preventDefault();show($("#scanIn").value)});
+  bindCam(el,code=>{$("#scanIn").value=code;show(code)});
+  el.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>{$("#scanIn").value=b.dataset.scan;show(b.dataset.scan)}));
+  show(scanCode);
+  $("#scanIn").focus();
+}
+
+/* ---------- productions ---------- */
+function kitCodes(p){return [...new Set((KITS[p.degree]||[]).flatMap(r=>r.items))].filter(c=>crew==="All"||item(c).dept===crew)}
+function gaps(p){return kitCodes(p).map(item).filter(i=>!["Ready","Pulled","In use"].includes(i.status))}
+let selProd="P1";
+function productions(el){
+  const p=S.productions.find(x=>x.id===selProd)||S.productions[0];
+  el.innerHTML=`
+  <div class="kanban">${STAGES.map(st=>`<div class="col"><h4>${st}<span>${S.productions.filter(x=>x.stage===st).length}</span></h4>${S.productions.filter(x=>x.stage===st).map(x=>{const g=gaps(x).length;return `<div class="card pick-card${x.id===p.id?" on":""}" data-sel="${x.id}" role="button" tabindex="0" aria-pressed="${x.id===p.id}" aria-label="${esc(x.name)} · ${x.degree}: show pull list"><b>${esc(x.name)}</b><span class="muted">${x.degree} · ${esc(x.date)}</span>${g?`<span class="gap">${g} kit gap${g>1?"s":""}</span>`:`<span class="small" style="color:var(--ok);font-weight:700">Kit complete</span>`}<div class="row"><button class="btn" data-sel="${x.id}">Pull list</button>${STAGES.indexOf(st)<4?`<button class="btn" data-adv="${x.id}">Move to ${STAGES[STAGES.indexOf(st)+1]}</button>`:""}</div></div>`}).join("")}</div>`).join("")}</div>
+  <div class="grid g2">
+    <div class="panel"><h2>Pull list · ${esc(p.name)} · ${p.degree}</h2>
+      ${(KITS[p.degree]||[]).map(r=>{const codes=r.items.filter(c=>crew==="All"||item(c).dept===crew);if(!codes.length)return"";return `<h3 style="margin-top:10px">${esc(r.role)}</h3><ul class="pull">${codes.map(c=>{const i=item(c),bad=!["Ready","Pulled","In use"].includes(i.status);return `<li class="pick-row" data-open="${c}" role="button" tabindex="0" aria-label="Open ${esc(i.name)}">${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-open="${c}">${c}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${esc(i.location)} · size ${esc(i.size)}</span></span>${bad?`<span class="gap">GAP</span>`:i.status==="Ready"?`<button class="btn" data-pull="${c}">Pull</button>`:`<span></span>`}</li>`}).join("")}</ul>`}).join("")}
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="pullAll">Pull every ready piece</button></div>
+      <p class="note" style="margin-top:12px">Masks are skipped by "Pull every ready piece": the wardrobe lead signs each one out from its record.</p>
+    </div>
+    <div class="panel"><h2>End-of-day check</h2>
+      <p class="small muted" style="margin-top:0">Cast keep nothing, so every piece should be back the same day. The live system runs this check automatically each production night and alerts the crew lead; run it here to see the result.</p>
+      <button class="btn primary" id="eod">Run end-of-day check</button>
+      <div id="eodOut" style="margin-top:12px"></div>
+    </div>
+  </div>`;
+  el.querySelectorAll("[data-sel]").forEach(b=>{b.onclick=e=>{if(e.target.closest("[data-adv]"))return;selProd=b.dataset.sel;render();const h=$("#view .g2 h2");if(h&&matchMedia("(max-width:980px)").matches)h.scrollIntoView({behavior:"smooth",block:"start"})};b.onkeydown=e=>{if(e.target===b&&(e.key==="Enter"||e.key===" ")){e.preventDefault();b.click()}}});
+  el.querySelectorAll("[data-adv]").forEach(b=>b.onclick=e=>{e.stopPropagation();const x=S.productions.find(y=>y.id===b.dataset.adv);x.stage=STAGES[STAGES.indexOf(x.stage)+1];selProd=x.id;let k=0;if(x.stage==="Returned"&&!x.pointsAwarded){S.slots.filter(sl=>sl.prod===x.id&&sl.status==="Confirmed"&&sl.member).forEach(sl=>{award(sl.member,POINTS.cast,`Served as ${sl.role} · ${x.degree}`);k++});x.pointsAwarded=true}save();render();toast(x.name+" · "+x.degree+" moved to "+x.stage+(k?` · ${k} cast earned ${POINTS.cast} points`:""))});
+  el.querySelectorAll("[data-pull]").forEach(b=>b.onclick=e=>{e.stopPropagation();const i=item(b.dataset.pull);if(i.high){openItem(i.code);toast("Masks need the wardrobe lead's sign-out");return}act(i,"Pulled",`Pulled for ${p.name} · ${p.degree}`);render();toast(i.code+" pulled")});
+  $("#pullAll").onclick=()=>{let k=0;kitCodes(p).map(item).forEach(i=>{if(i.status==="Ready"&&!i.high){act(i,"Pulled",`Pulled for ${p.name} · ${p.degree}`);k++}});render();toast(k?k+" pieces pulled":"Nothing ready left to pull")};
+  $("#eod").onclick=()=>{
+    const out=visible().filter(i=>i.status==="Pulled"||i.status==="In use");
+    out.forEach(i=>{if(!i.flag){i.flag=true;i.log.unshift({t:Date.now(),by:"End-of-day check",text:"Not returned by end of production day"})}});save();
+    $("#eodOut").innerHTML=out.length?`<div class="banner bad"><div><b>${out.length} piece${out.length>1?"s":""} not back.</b> ${out.some(i=>i.high)?"<b>Includes a high-value mask: the wardrobe lead is alerted now.</b> ":""}Each is flagged on its record.<ul class="pull" style="margin-top:8px">${out.map(i=>`<li class="pick-row" data-open="${i.code}" role="button" tabindex="0">${chip(i.status)}<span>${i.code} ${esc(i.name)}</span><span></span></li>`).join("")}</ul></div></div>`:`<div class="banner ok">Everything is back. Nothing to chase tonight.</div>`;
+  };
+}
+
+/* ---------- 3D helpers ---------- */
+let loops=[];
+function stopLoops(){loops.forEach(f=>f());loops=[]}
+function have3d(){return typeof THREE!=="undefined"&&THREE.OrbitControls}
+function makeRenderer(wrap){
+  const r=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  r.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  wrap.appendChild(r.domElement);
+  return r;
+}
+function sizeTo(wrap,r,cam){const w=wrap.clientWidth,h=wrap.clientHeight||w*.62;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+function hexOf(v){return new THREE.Color(cssv(v)||"#888")}
+
+/* ---------- item models (shared by the 3D views and the item pictures) ---------- */
+const WCOL={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
+function mannequin(ghost){
+  const g=new THREE.Group(), o=ghost?{transparent:true,opacity:.1,depthWrite:false}:{};
+  const skin=new THREE.MeshStandardMaterial({color:0xc9b8a6,roughness:.9,...o});
+  const add=(geo,m,x,y,z)=>{const k=new THREE.Mesh(geo,m);k.position.set(x,y,z);g.add(k);return k};
+  if(!ghost) add(new THREE.CylinderGeometry(.6,.6,.06,32),new THREE.MeshStandardMaterial({color:0x555b66}),0,.03,0);
+  add(new THREE.SphereGeometry(.2,24,16),skin,0,2.12,0);
+  add(new THREE.CylinderGeometry(.08,.09,.14,16),skin,0,1.92,0);
+  add(new THREE.CylinderGeometry(.27,.22,.85,24),skin,0,1.45,0);
+  add(new THREE.CylinderGeometry(.22,.2,.25,24),skin,0,.95,0);
+  [-.11,.11].forEach(x=>add(new THREE.CylinderGeometry(.075,.065,.82,12),skin,x,.43,0));
+  [-.36,.36].forEach(x=>{const a=add(new THREE.CylinderGeometry(.055,.05,.78,12),skin,x,1.42,0);a.rotation.z=x>0?.18:-.18});
+  return g;
+}
+function itemModel(i){
+  const g=new THREE.Group();
+  const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.7,side:THREE.DoubleSide,...o});
+  const m=M(WCOL[i.type]||0x888888,{metalness:i.type==="Collar"||i.type==="Mask"?.45:0});
+  const put=(geo,x,y,z,rx=0,rz=0,mm=m)=>{const o=new THREE.Mesh(geo,mm);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;g.add(o);return o};
+  if(i.dept==="Wardrobe"){
+    switch(i.type){
+      case "Robe":case "Tunic":case "Coat":{const len=i.type==="Tunic"?1.0:1.75;put(new THREE.CylinderGeometry(.3,i.type==="Tunic"?.36:.48,len,32,1,true),0,1.86-len/2,0);[-.37,.37].forEach(x=>put(new THREE.CylinderGeometry(.075,.1,.62,12),x,1.52,0,0,x>0?.18:-.18));break}
+      case "Cape":put(new THREE.CylinderGeometry(.34,.62,1.5,32,1,true,Math.PI*.15,Math.PI*1.7),0,1.15,-.02);break;
+      case "Sash":{const s=new THREE.BoxGeometry(.13,1.05,.36);put(s,0,1.45,0,0,-.62);break}
+      case "Collar":put(new THREE.TorusGeometry(.24,.05,10,32),0,1.86,0,Math.PI/2);put(new THREE.ConeGeometry(.09,.22,4),0,1.68,.27,Math.PI);break;
+      case "Gloves":[-.44,.44].forEach(x=>put(new THREE.SphereGeometry(.075,12,10),x,1.02,0));break;
+      case "Footwear":[-.11,.11].forEach(x=>put(new THREE.BoxGeometry(.14,.07,.3),x,.07,.05));break;
+      case "Headpiece":put(new THREE.CylinderGeometry(.19,.22,.26,24),0,2.33,0);put(new THREE.TorusGeometry(.215,.025,8,32),0,2.22,0,Math.PI/2);break;
+      case "Mask":put(new THREE.SphereGeometry(.205,24,16,Math.PI*.15,Math.PI*.7,Math.PI*.25,Math.PI*.42),0,2.12,.01);{const eye=new THREE.MeshStandardMaterial({color:0x111111});[-.075,.075].forEach(x=>{const e=new THREE.Mesh(new THREE.SphereGeometry(.032,12,8),eye);e.scale.set(1.4,.7,.5);e.position.set(x,2.16,.19);g.add(e)});put(new THREE.ConeGeometry(.03,.1,4),0,2.09,.215,-.25)}break;
+      default:put(new THREE.BoxGeometry(.2,.2,.2),0,1.4,.3);
+    }
+    return g;
+  }
+  // props: simple sample shapes by name; the real photo replaces the picture at tagging
+  const wood=M(0x7a5634), gold=M(0xc9a227,{metalness:.6,roughness:.35}), steel=M(0xc0c4cc,{metalness:.7,roughness:.3}), red=M(0x8e1b2c);
+  const C=(rt,rb,h,n=20)=>new THREE.CylinderGeometry(rt,rb,h,n), B=(x,y,z)=>new THREE.BoxGeometry(x,y,z);
+  switch(i.name){
+    case "Stage sword (blunt)": put(B(.07,1,.02),0,.75,0,0,0,steel); put(B(.34,.05,.07),0,.24,0,0,0,gold); put(C(.03,.03,.2),0,.12,0,0,0,wood); put(new THREE.SphereGeometry(.045,12,10),0,0,0,0,0,gold); break;
+    case "Staff": put(C(.035,.04,1.7),0,.85,0,0,0,wood); put(new THREE.SphereGeometry(.08,16,12),0,1.74,0,0,0,gold); break;
+    case "Lantern": put(B(.28,.36,.28),0,.3,0,0,0,M(0xf1d27a,{transparent:true,opacity:.55,emissive:0xf1c24a,emissiveIntensity:.4})); put(B(.32,.04,.32),0,.1,0,0,0,M(0x2b2b2b)); put(new THREE.ConeGeometry(.24,.2,4),0,.58,0,0,0,M(0x2b2b2b)); put(new THREE.TorusGeometry(.07,.012,8,20),0,.72,0,0,0,M(0x2b2b2b)); break;
+    case "Scroll": put(C(.07,.07,.6),0,.08,0,0,Math.PI/2,M(0xe8dcb5)); [-.33,.33].forEach(x=>put(C(.02,.02,.12),x,.08,0,0,Math.PI/2,wood)); break;
+    case "Chalice": put(C(.13,.16,.03),0,.015,0,0,0,gold); put(C(.025,.03,.28),0,.17,0,0,0,gold); put(C(.13,.05,.2,24),0,.4,0,0,0,gold); break;
+    case "Throne chair": put(B(.9,.12,.8),0,.5,0,0,0,wood); put(B(.9,1.1,.12),0,1.1,-.34,0,0,wood); put(B(.7,.06,.6),0,.59,.02,0,0,red); put(B(.7,.8,.04),0,1.1,-.27,0,0,red); [[-.4,-.35],[.4,-.35],[-.4,.35],[.4,.35]].forEach(([x,z])=>put(B(.08,.45,.08),x,.22,z,0,0,wood)); break;
+    case "Altar cloth": put(B(1.1,.46,.7),0,.25,0,0,0,wood); put(B(1.2,.04,.8),0,.5,0,0,0,M(0xeeeeea)); [-.6,.6].forEach(x=>put(B(.02,.45,.8),x,.3,0,0,0,M(0xeeeeea)));put(B(1.2,.32,.02),0,.35,.4,0,0,M(0xeeeeea)); put(B(.06,.46,.06),0,.27,0,0,0,gold); break;
+    case "Banner": put(C(.02,.02,2),0,1,0,0,0,wood); put(C(.015,.015,1),0,1.95,0,0,Math.PI/2,wood); put(B(.9,1.3,.02),0,1.28,.02,0,0,red); put(B(.5,.5,.025),0,1.35,.03,0,0,gold); break;
+    case "Candle stand": put(C(.16,.2,.05),0,.025,0,0,0,gold); put(C(.025,.03,1.2),0,.62,0,0,0,gold); put(C(.09,.06,.06),0,1.24,0,0,0,gold); put(C(.035,.035,.25),0,1.4,0,0,0,M(0xf5f0e1)); put(new THREE.ConeGeometry(.02,.06,8),0,1.56,0,0,0,M(0xffb347,{emissive:0xff9a2a,emissiveIntensity:.8})); break;
+    default: put(C(.16,.16,.5),0,.25,0,0,0,wood);
+  }
+  return g;
+}
+/* item pictures: one shared offscreen renderer draws each piece once and caches it */
+const PICS={}; let picR=null;
+function itemPic(i){
+  if(i.code in PICS) return PICS[i.code];
+  if(!have3d()) return "";
+  try{
+    if(!picR){picR=new THREE.WebGLRenderer({antialias:true,alpha:true,preserveDrawingBuffer:true});picR.setPixelRatio(1);picR.setSize(320,240,false)}
+    const scene=new THREE.Scene(); scene.add(new THREE.HemisphereLight(0xffffff,0x556070,1)); const dl=new THREE.DirectionalLight(0xffffff,.75); dl.position.set(2,4,5); scene.add(dl);
+    const g=itemModel(i); scene.add(g); if(i.dept==="Wardrobe") scene.add(mannequin(true));
+    const box=new THREE.Box3().setFromObject(g), c=box.getCenter(new THREE.Vector3()), sz=box.getSize(new THREE.Vector3()), d=Math.max(sz.x,sz.y*1.25,sz.z,.3);
+    const cam=new THREE.PerspectiveCamera(30,4/3,.01,100); cam.position.set(c.x+d*(i.type==="Mask"||i.type==="Headpiece"?.15:.6),c.y+d*.35,c.z+d*2.2); cam.lookAt(c);
+    picR.render(scene,cam); PICS[i.code]=picR.domElement.toDataURL("image/png");
+    scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose()});
+  }catch(e){PICS[i.code]=""}
+  return PICS[i.code];
+}
+const picHtml=(i,sm)=>{const u=itemPic(i);return u?`<figure class="ipic${sm?" sm":""}"><img src="${u}" alt="Illustration of ${esc(i.name)}"><figcaption>Illustration · the real photo is added at tagging</figcaption></figure>`:""};
+
+/* ---------- dressing guide ---------- */
+let gDeg="32°", gRole=0, gStep=99;
+function guide(el){
+  const roles=KITS[gDeg]; if(gRole>=roles.length) gRole=0;
+  const pieces=roles[gRole].items.map(item).filter(i=>i.dept==="Wardrobe").sort((a,b)=>LAYER_ORDER.indexOf(a.type)-LAYER_ORDER.indexOf(b.type));
+  if(gStep>pieces.length) gStep=pieces.length;
+  el.innerHTML=`<div class="filters">
+     <select id="gDeg" aria-label="Degree">${Object.keys(KITS).map(d=>`<option ${d===gDeg?"selected":""}>${d}</option>`).join("")}</select>
+     <select id="gRole" aria-label="Role">${roles.map((r,k)=>`<option value="${k}" ${k===gRole?"selected":""}>${esc(r.role)}</option>`).join("")}</select>
+     <span class="small muted">Sample roles and instructions. The Valley's wardrobe crew writes the real ones.</span></div>
+   <div class="grid g32">
+     <div class="stagewrap" id="mWrap"><div class="loading3d" id="mLoad">Loading 3D view…</div></div>
+     <div class="panel"><h2>${gDeg} · ${esc(roles[gRole].role)}: dressing order</h2>
+       <label class="small muted" for="gStep">Dressed through step <b id="gStepN">${gStep}</b> of ${pieces.length}</label>
+       <input type="range" id="gStep" min="0" max="${pieces.length}" value="${gStep}">
+       <ol class="steps" id="gSteps">${pieces.map((i,k)=>`<li data-step="${k+1}" class="${k+1===gStep?"on":k+1>gStep?"future":""}"><span><b>${esc(i.name)}</b> <button class="btn" style="padding:0 6px;font-size:12px" data-open="${i.code}">${i.code}</button> ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small">${esc(DRESS[i.type]||"Dress as shown.")}</span><br><span class="small muted">From ${esc(i.location)} · size ${esc(i.size)} · ${chip(i.status)}</span> <button class="btn" style="padding:0 6px;font-size:12px" data-room="${i.code}">Show in room</button></span></li>`).join("")}</ol>
+       <p class="note" style="margin-top:12px">In the live system each role is a lesson in the Valley's private Wardrobe & Props Guide course, with front, back and side photos of the real costume and a 360° phone video.</p>
+     </div></div>`;
+  $("#gDeg").onchange=e=>{gDeg=e.target.value;gRole=0;gStep=99;render()};
+  $("#gRole").onchange=e=>{gRole=+e.target.value;gStep=99;render()};
+  const setStep=v=>{gStep=v;$("#gStepN").textContent=v;$("#gStep").value=v;$("#gSteps").querySelectorAll("li").forEach(li=>{const s=+li.dataset.step;li.className=s===v?"on":s>v?"future":""});dz&&dz.setStep(v)};
+  $("#gStep").oninput=e=>setStep(+e.target.value);
+  $("#gSteps").addEventListener("click",e=>{if(e.target.closest("[data-open]"))return;const li=e.target.closest("li");if(li)setStep(+li.dataset.step)});
+  let dz=null;
+  if(!have3d()){$("#mLoad").textContent="The 3D view needs WebGL and couldn't load here. The dressing steps still work.";return}
+  const wrap=$("#mWrap"); $("#mLoad").remove();
+  dz=mountDress(wrap,pieces,gStep);
+}
+
+/* the dressed mannequin; reused by the dressing guide and the crew app */
+function mountDress(wrap,pieces,step,focus){
+  const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
+  const cam=new THREE.PerspectiveCamera(35,1.6,.1,100); cam.position.set(0,1.6,6.2);
+  const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,1.15,0); ctl.enablePan=false; ctl.minDistance=3; ctl.maxDistance=9; ctl.autoRotate=!matchMedia("(prefers-reduced-motion: reduce)").matches; ctl.autoRotateSpeed=1.4; ctl.update();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x444455,.9)); const dl=new THREE.DirectionalLight(0xffffff,.8); dl.position.set(3,5,4); scene.add(dl);
+  scene.add(mannequin());
+  const build=i=>{const g=itemModel(i);scene.add(g);return g};
+  const layers=pieces.map(build); layers.forEach((m,k)=>m.visible=k<step);
+  if(focus&&pieces.some(p=>p.code===focus))layers.forEach((g,k)=>{if(pieces[k].code!==focus)g.traverse(o=>{if(o.material){o.material=o.material.clone();o.material.transparent=true;o.material.opacity=.22;o.material.depthWrite=false}})}); // ghost the rest so the piece keeps its real colour
+  let raf=0,alive=true; const tick=()=>{if(!alive)return;ctl.update();r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
+  const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
+  ctl.addEventListener("start",()=>ctl.autoRotate=false);
+  loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  return {setStep:v=>layers.forEach((m,k)=>m.visible=k<v)};
+}
+
+/* ---------- stage layout ---------- */
+let sDeg="18°", sScene=0, sTop=false;
+function stage(el){
+  el.innerHTML=`<div class="filters">
+     <select id="sDeg" aria-label="Degree">${Object.keys(STAGE_LAYOUT).map(d=>`<option ${d===sDeg?"selected":""}>${d}</option>`).join("")}</select>
+     <div class="seg" role="group" aria-label="Scene">${[0,1].map(k=>`<button type="button" data-scene="${k}" aria-pressed="${k===sScene}">Scene ${k+1}</button>`).join("")}</div>
+     <div class="seg" role="group" aria-label="Camera"><button type="button" data-cam="3d" aria-pressed="${!sTop}">3D</button><button type="button" data-cam="top" aria-pressed="${sTop}">Top-down plot</button></div>
+     <span class="small muted">Generic stage and sample positions. The Valley's props lead sets the real layout.</span></div>
+   <div class="grid g32">
+     <div class="stagewrap sticky3d" id="sWrap"><div class="loading3d" id="sLoad">Loading 3D stage…</div></div>
+     <div class="panel"><div id="sCard" class="cardslot"></div><h2>${sDeg} · Scene ${sScene+1}: props on stage</h2><ul class="pull" id="sList"></ul>
+       <p class="note" style="margin-top:12px">Tap a prop on the stage or in this list to see its details here. Color shows its status; a red ring marks a piece that isn't ready. In the live system this view sits in the Valley's private guide and links to each prop's record.</p></div></div>`;
+  const placed=STAGE_LAYOUT[sDeg][sScene];
+  $("#sList").innerHTML=placed.map(pp=>{const i=item(pp.c);return `<li class="pick-row" data-pick="${i.code}" tabindex="0" role="button" aria-label="Show ${esc(i.name)} on the stage">${chip(i.status)}<span><span class="code">${i.code}</span> ${esc(i.name)}<br><span class="small muted">From ${esc(i.location)}</span></span>${i.status==="Ready"||i.status==="Pulled"||i.status==="In use"?"<span></span>":'<span class="gap">GAP</span>'}</li>`}).join("");
+  $("#sDeg").onchange=e=>{sDeg=e.target.value;sScene=0;render()};
+  el.querySelectorAll("[data-scene]").forEach(b=>b.onclick=()=>{sScene=+b.dataset.scene;render()});
+  el.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.cam==="top";render()});
+  const card=code=>{const i=item(code);$("#sCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="sCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close prop details">Close</button></div>${picHtml(i,1)}<b>${esc(i.name)}</b><div class="row">${chip(i.status)}</div><span class="small muted">${esc(i.location)} · ${esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#sCardClose").onclick=()=>{$("#sCard").innerHTML="";highlight(null)}};
+  el.querySelectorAll("[data-pick]").forEach(b=>{const go=()=>{card(b.dataset.pick);highlight(b.dataset.pick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
+  let highlight=()=>{};
+  if(!have3d()){$("#sLoad").textContent="The 3D stage needs WebGL and couldn't load here. The props list still works.";return}
+  const wrap=$("#sWrap"); $("#sLoad").remove();
+  const h3=mountStage(wrap,placed,sTop,c=>{card(c);highlight(c)});
+  highlight=code=>{h3(code);document.querySelectorAll("#sList [data-pick]").forEach(b=>b.classList.toggle("on",b.dataset.pick===code))};
+}
+
+/* the 3D stage; reused by the stage layout and the crew app */
+function mountStage(wrap,placed,top,onPick,zoom){
+  const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
+  const cam=new THREE.PerspectiveCamera(40,1.6,.1,200);
+  if(top){cam.position.set(0,17,0.01)}else{cam.position.set(0,7.2,14.5)}
+  const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.6,-1.2); ctl.maxPolarAngle=top?0.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=22; ctl.enableRotate=!top; ctl.update();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x333344,.85)); const sp=new THREE.DirectionalLight(0xfff1dc,.9); sp.position.set(-4,9,6); scene.add(sp);
+  const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
+  const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);scene.add(o);return o};
+  box(14,.1,10,M(0x2b2e36),0,-.05,0);           // house floor
+  box(10,.5,6.4,M(0x5a3d29),0,.25,-1);          // stage deck
+  box(4,.35,1.6,M(0x4a3222),0,.67,-3.2);        // upstage riser
+  box(.6,4.6,.6,M(0x3a1f2b),-5.3,2.3,2.2); box(.6,4.6,.6,M(0x3a1f2b),5.3,2.3,2.2); box(11.2,.7,.6,M(0x3a1f2b),0,4.45,2.2); // proscenium
+  [-1,1].forEach(s=>{for(let k=0;k<3;k++)box(.15,3.6,1,M(0x23262d),s*(4.2+k*.25),1.8+.5,-k*1.8)}); // wing flats
+  box(10,3.8,.15,M(0x161a22),0,2.4,-4.25);      // back wall
+  // floor marks: centre line + quadrant labels as thin strips
+  box(.04,.02,6,M(0xe0c48a),0,.51,-1);
+  const meshes={}, hits=[];
+  placed.forEach(pp=>{
+    const i=item(pp.c); const st=i.status; const color=hexOf(STATUS_VAR[st]);
+    const m=M(color,{emissive:color,emissiveIntensity:.18});
+    let g;
+    if(i.type==="Stage weapon"){g=new THREE.Mesh(new THREE.BoxGeometry(.08,1.1,.08),m);g.position.set(pp.x,1.05,pp.z);g.rotation.z=.25}
+    else if(i.type==="Set piece"&&i.name.includes("chair")){g=new THREE.Group();const s=new THREE.Mesh(new THREE.BoxGeometry(1,.5,.9),m);s.position.y=.25;const b=new THREE.Mesh(new THREE.BoxGeometry(1,1.4,.15),m);b.position.set(0,.95,-.38);g.add(s,b);g.position.set(pp.x,pp.z<-2.4?.85:.5,pp.z)}
+    else if(i.type==="Set piece"){g=new THREE.Mesh(new THREE.CylinderGeometry(.08,.22,1.4,16),m);g.position.set(pp.x,1.2,pp.z)}
+    else if(i.type==="Set dressing"){g=new THREE.Mesh(new THREE.BoxGeometry(1.2,i.name==="Banner"?1.8:.06,i.name==="Banner"?.05:.8),m);g.position.set(pp.x,i.name==="Banner"?1.6:.55,pp.z)}
+    else {g=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.5,20),m);g.position.set(pp.x,.75,pp.z)}
+    g.userData.code=i.code; scene.add(g); meshes[i.code]=g;
+    const hit=new THREE.Mesh(new THREE.CylinderGeometry(.7,.7,2.4,16),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+    hit.position.set(pp.x,1.2,pp.z); hit.userData.code=i.code; scene.add(hit); hits.push(hit);
+    const cv=document.createElement("canvas"); cv.width=256; cv.height=64; const cx=cv.getContext("2d");
+    cx.fillStyle="rgba(23,26,33,.86)"; cx.fillRect(0,0,256,64); cx.fillStyle="#fff"; cx.font="600 26px IBM Plex Mono, monospace"; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(i.code.replace("DEMO-",""),128,33);
+    const lab=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false})); lab.scale.set(1.1,.28,1); lab.position.set(pp.x,2.35,pp.z); lab.userData.code=i.code; scene.add(lab); hits.push(lab);
+    if(!["Ready","Pulled","In use"].includes(st)){const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.04,8,40),M(hexOf("--bad"),{emissive:hexOf("--bad"),emissiveIntensity:.6}));ring.rotation.x=Math.PI/2;ring.position.set(pp.x,.53,pp.z);scene.add(ring)}
+  });
+  let sel=null;
+  const selRing=new THREE.Mesh(new THREE.TorusGeometry(.75,.06,8,48),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.7})); selRing.rotation.x=Math.PI/2; selRing.visible=false; scene.add(selRing);
+  const hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.25);selRing.position.set(sel.position.x,.54,sel.position.z);if(zoom){ctl.target.set(sel.position.x,.8,sel.position.z);cam.position.set(sel.position.x+3,6,sel.position.z+8.5);ctl.update()}}};
+  const ray=new THREE.Raycaster(), v=new THREE.Vector2();
+  const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
+  let down=null;
+  r.domElement.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}},true);
+  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(moved>6)return;const c=pick(e);if(c){hl(c);onPick(c)}},true);
+  r.domElement.addEventListener("pointermove",e=>{if(e.buttons)return;r.domElement.style.cursor=pick(e)?"pointer":"grab"});
+  let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)sel.rotation.y=(performance.now()-t0)/900;r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
+  const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
+  loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  return hl;
+}
+
+/* ---------- wardrobe room ---------- */
+let roomFocus=null;
+const ROOM={ // storage spots in the wardrobe room (sample layout; the Valley's wardrobe lead maps the real room)
+ "Wardrobe Rack A1":{kind:"rack",x:-4.2,z:-3.3,label:"Rack A1 · robes"},
+ "Wardrobe Rack A2":{kind:"rack",x:-1.4,z:-3.3,label:"Rack A2 · tunics"},
+ "Wardrobe Rack B1":{kind:"rack",x:1.4,z:-3.3,label:"Rack B1 · capes"},
+ "Wardrobe Rack B2":{kind:"rack",x:4.2,z:-3.3,label:"Rack B2 · coats"},
+ "Wardrobe Drawer C1":{kind:"drawer",x:5.6,z:-.4,row:0,label:"Drawers C1–C4"},
+ "Wardrobe Drawer C3":{kind:"drawer",x:5.6,z:-.4,row:2},
+ "Wardrobe Shelf D2":{kind:"shelf",x:-5.6,z:-.2,row:1,label:"Shelves D1–D3 · headpieces"},
+ "Wardrobe Bin E1":{kind:"bin",x:-3.7,z:2.8,label:"E1 · footwear"},
+ "Wardrobe Bin E2":{kind:"bin",x:-1.5,z:2.8,label:"E2 · gloves"},
+ "Locked mask cabinet":{kind:"cabinet",x:4.4,z:2.9,label:"Locked mask cabinet"}
+};
+function room(el){
+  const its=S.items.filter(i=>i.dept==="Wardrobe");
+  const byLoc={}; its.forEach(i=>(byLoc[i.location]=byLoc[i.location]||[]).push(i));
+  const out=its.filter(i=>i.status==="Pulled"||i.status==="In use").length;
+  el.innerHTML=`<div class="filters"><div class="seg" role="group" aria-label="Camera"><button type="button" data-rcam="3d" aria-pressed="${!sTop}">3D</button><button type="button" data-rcam="top" aria-pressed="${sTop}">Floor plan</button></div>
+    <span class="small muted">Sample room layout. The wardrobe lead maps the real racks, drawers and shelves once, then every piece shows where it lives.</span></div>
+  <div class="grid g32">
+    <div class="stagewrap sticky3d" id="rWrap"><div class="loading3d" id="rLoad">Loading wardrobe room…</div></div>
+    <div class="panel"><div id="rCard" class="cardslot"></div><h2>Where everything lives</h2>
+      <p class="small muted" style="margin-top:0">${its.length} sample pieces (about 300 in the real room) · ${out} out right now, shown as an empty hanger or slot.</p>
+      ${Object.entries(byLoc).map(([loc,list])=>`<h3 style="margin-top:12px">${esc(loc)}</h3><ul class="pull" data-loc>${list.map(i=>`<li class="pick-row" data-rpick="${i.code}" tabindex="0" role="button" aria-label="Show ${esc(i.name)} in the room">${chip(i.status)}<span><span class="code">${i.code}</span> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${i.degree} · size ${esc(i.size)}</span></span><span></span></li>`).join("")}</ul>`).join("")}
+    </div></div>`;
+  el.querySelectorAll("[data-rcam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.rcam==="top";render()});
+  const card=code=>{const i=item(code);if(matchMedia("(max-width:980px)").matches){const w=$("#rWrap");if(w&&w.getBoundingClientRect().bottom<0)w.scrollIntoView({block:"start",behavior:"smooth"})}$("#rCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="rCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close piece details">Close</button></div>${picHtml(i,1)}<b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span><span class="small muted">${i.status==="Pulled"||i.status==="In use"?"Out of the room now. Its spot is held empty for the return.":esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#rCardClose").onclick=()=>{$("#rCard").innerHTML="";hl(null)}};
+  let hl=()=>{};
+  el.querySelectorAll("[data-rpick]").forEach(b=>{const go=()=>{card(b.dataset.rpick);hl(b.dataset.rpick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
+  if(!have3d()){$("#rLoad").textContent="The 3D room needs WebGL and couldn't load here. The location list still works.";return}
+  const wrap=$("#rWrap"); $("#rLoad").remove();
+  const h3=mountRoom(wrap,its,sTop,c=>{card(c);hl(c)});
+  hl=code=>{h3(code);document.querySelectorAll("#view [data-rpick]").forEach(b=>b.classList.toggle("on",b.dataset.rpick===code))};
+  if(roomFocus&&item(roomFocus)){card(roomFocus);hl(roomFocus)} roomFocus=null;
+}
+
+/* the 3D wardrobe room; reused by the wardrobe room view and the crew app */
+function mountRoom(wrap,its,top,onPick,zoom){
+  const byLoc={}; its.forEach(i=>(byLoc[i.location]=byLoc[i.location]||[]).push(i));
+  const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
+  const cam=new THREE.PerspectiveCamera(40,1.6,.1,200);
+  if(top) cam.position.set(0,16,.01); else cam.position.set(0,7.6,11.2);
+  const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.8,-.3); ctl.maxPolarAngle=top?.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=24; ctl.enableRotate=!top; ctl.update();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x3a3d48,.95)); const dl=new THREE.DirectionalLight(0xffffff,.7); dl.position.set(3,10,6); scene.add(dl);
+  const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
+  const add=(geo,m,x,y,z,ry=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.y=ry;scene.add(o);return o};
+  const box=(w,h,d,m,x,y,z)=>add(new THREE.BoxGeometry(w,h,d),m,x,y,z);
+  // room shell
+  box(13,.1,9,M(0x9a8f80),0,-.05,0); box(13,3.2,.15,M(0xd9d4cc),0,1.6,-4.5); box(.15,3.2,9,M(0xcfc9c0),-6.5,1.6,0); box(.15,3.2,9,M(0xcfc9c0),6.5,1.6,0);
+  const metal=M(0x7d838f,{metalness:.5,roughness:.4}), wood=M(0x8a6a48), dark=M(0x3a3f4a);
+  const col={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
+  const sign=(text,x,y,z,w=2.4)=>{const cv=document.createElement("canvas");cv.width=512;cv.height=96;const c=cv.getContext("2d");c.fillStyle="rgba(23,26,33,.88)";c.fillRect(0,0,512,96);c.fillStyle="#fff";c.font="600 40px Public Sans, Arial, sans-serif";c.textAlign="center";c.textBaseline="middle";c.fillText(text,256,50);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:!zoom}));if(zoom)w*=.55;sp.scale.set(w,w*.1875,1);sp.position.set(x,y,z);scene.add(sp);signs.push(sp)};
+  const meshes={}, hits=[], signs=[];
+  const tagOf=i=>{const c=hexOf(STATUS_VAR[i.status]);return M(c,{emissive:c,emissiveIntensity:.35})};
+  const reg=(i,obj,hx,hy,hz,hr=.35,hh=1.4)=>{obj.userData.code=i.code;meshes[i.code]=obj;const h=add(new THREE.CylinderGeometry(hr,hr,hh,12),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),hx,hy,hz);h.userData.code=i.code;hits.push(h)};
+  const outMat=M(0x9aa1b0,{transparent:true,opacity:.28});
+  Object.entries(ROOM).forEach(([loc,R])=>{
+    const list=byLoc[loc]||[];
+    if(R.kind==="rack"){
+      [-1.15,1.15].forEach(dx=>box(.06,2.2,.06,metal,R.x+dx,1.1,R.z)); box(2.4,.05,.05,metal,R.x,2.2,R.z); [-1.15,1.15].forEach(dx=>box(.06,.06,.6,metal,R.x+dx,.05,R.z));
+      sign(R.label,R.x,2.65,R.z);
+      list.forEach((i,k)=>{const x=R.x-.8+k*.55, isOut=i.status==="Pulled"||i.status==="In use";
+        add(new THREE.TorusGeometry(.06,.012,6,12,Math.PI),metal,x,2.16,R.z); box(.42,.03,.03,metal,x,2.08,R.z);
+        const len=i.type==="Tunic"?1.0:1.6, g=add(new THREE.BoxGeometry(.44,len,.16),isOut?outMat:M(col[i.type]||0x777777),x,2.05-len/2,R.z);
+        box(.14,.1,.02,tagOf(i),x,2.0-len*0.12,R.z+.09);
+        reg(i,g,x,1.3,R.z,.28,1.8)});
+    }else if(R.kind==="drawer"){
+      if(R.label){box(.9,1.6,1.4,wood,R.x,.8,R.z);for(let k=0;k<4;k++)box(.04,.32,1.25,M(0xa58560),R.x-.46,1.4-k*.38,R.z);sign(R.label,R.x-.5,2.0,R.z)}
+      list.forEach((i,k)=>{const y=1.4-R.row*.38, isOut=i.status==="Pulled"||i.status==="In use";const f=box(.05,.3,1.2,isOut?outMat:M(col[i.type]||0x777777,{emissive:col[i.type]||0,emissiveIntensity:.15}),R.x-.5,y,R.z-.2+k*.4);box(.03,.08,.2,tagOf(i),R.x-.53,y,R.z+.45);reg(i,f,R.x-.6,y,R.z,.4,.5)});
+    }else if(R.kind==="shelf"){
+      if(R.label){[-.7,.7].forEach(dz=>box(.6,2.1,.05,wood,R.x,1.05,R.z+dz));for(let k=0;k<3;k++)box(.6,.05,1.45,wood,R.x,.5+k*.65,R.z);sign(R.label,R.x+.4,2.45,R.z)}
+      list.forEach((i,k)=>{const y=.5+R.row*.65, isOut=i.status==="Pulled"||i.status==="In use";const h=add(new THREE.CylinderGeometry(.17,.2,.24,20),isOut?outMat:M(col[i.type]||0x777777),R.x+.05,y+.15,R.z-.35+k*.45);box(.02,.08,.14,tagOf(i),R.x+.31,y+.08,R.z-.35+k*.45);reg(i,h,R.x+.1,y+.2,R.z-.35+k*.45,.3,.5)});
+    }else if(R.kind==="bin"){
+      box(1.1,.5,.8,M(0x4a6b8a),R.x,.25,R.z); sign(R.label,R.x,1.05,R.z,1.55);
+      list.forEach((i,k)=>{const isOut=i.status==="Pulled"||i.status==="In use";const o=box(.35,.14,.25,isOut?outMat:M(col[i.type]||0x777777),R.x-.2+k*.4,.56,R.z);box(.1,.04,.02,tagOf(i),R.x-.2+k*.4,.56,R.z+.14);reg(i,o,R.x,.6,R.z,.45,.6)});
+    }else if(R.kind==="cabinet"){
+      box(1.6,1.9,.7,dark,R.x,.95,R.z); box(1.5,1.7,.03,M(0xbfd6e6,{transparent:true,opacity:.25,metalness:.3}),R.x,1.0,R.z+.37);
+      box(.08,.18,.06,M(0xc9a227,{metalness:.8,roughness:.3}),R.x+.6,1.0,R.z+.4); sign("LOCKED · masks",R.x,2.3,R.z);
+      list.forEach((i,k)=>{const x=R.x-.4+k*.8, isOut=i.status==="Pulled"||i.status==="In use";box(.08,.5,.08,M(0x222222),x,.75,R.z);const m=add(new THREE.SphereGeometry(.2,20,14,Math.PI*.1,Math.PI*.8),isOut?outMat:M(col.Mask,{metalness:.5,roughness:.35}),x,1.15,R.z+.05);box(.1,.05,.02,tagOf(i),x,.9,R.z+.32);reg(i,m,x,1.1,R.z,.3,.7)});
+    }
+  });
+  const selRing=add(new THREE.TorusGeometry(.4,.04,8,40),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.8}),0,0,0); selRing.rotation.x=Math.PI/2; selRing.visible=false;
+  let sel=null;
+  const hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.12);selRing.position.set(sel.position.x,.03,sel.position.z);if(zoom){ctl.target.set(sel.position.x,1.1,sel.position.z);cam.position.set(sel.position.x*.85,3.4,sel.position.z+(sel.position.z<0?5.2:4.6));ctl.update();signs.forEach(sp=>sp.visible=sp.position.distanceTo(cam.position)>4.5)}}};
+  const ray=new THREE.Raycaster(), v=new THREE.Vector2();
+  const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
+  let down=null;
+  r.domElement.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}},true);
+  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(mv>6)return;const c=pick(e);if(c){hl(c);onPick(c)}},true);
+  r.domElement.addEventListener("pointermove",e=>{if(e.buttons)return;r.domElement.style.cursor=pick(e)?"pointer":"grab"});
+  let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)selRing.scale.setScalar(1+.08*Math.sin((performance.now()-t0)/250));r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
+  const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
+  loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  return hl;
+}
+
+/* ---------- labels ---------- */
+function labels(el){
+  const its=visible();
+  el.innerHTML=`<p class="small muted" style="margin:0">One tag per piece: sewn-in or heat-transfer tags for garments, hard tags for props. Tap a tag to scan it in this demo. On the live system the QR opens the piece's record on the crew member's phone.</p>
+  <div class="labels" id="lab">${its.map(i=>`<button type="button" class="label" data-scantag="${i.code}" aria-label="Scan ${i.code}"><div class="qr" id="qr-${i.code}"></div><b>${i.code}</b><span>${esc(i.name)}${i.size&&i.size!=="-"?" · "+esc(i.size):""}<br>${esc(i.location)}</span></button>`).join("")}</div>`;
+  if(typeof QRCode!=="undefined") its.forEach(i=>{try{new QRCode(document.getElementById("qr-"+i.code),{text:i.code,width:104,height:104,correctLevel:QRCode.CorrectLevel.M})}catch(e){}});
+  else el.querySelectorAll(".qr").forEach(q=>q.textContent="QR");
+  el.querySelectorAll("[data-scantag]").forEach(b=>b.onclick=()=>{scanCode=b.dataset.scantag;go("scan")});
+}
+
+/* ---------- people helpers ---------- */
+const mem=id=>S.members.find(m=>m.id===id);
+const first=n=>n;
+function award(id,pts,text){const m=mem(id);if(!m)return;m.points+=pts;m.log.unshift({t:Date.now(),text,pts});S.activity.unshift({t:Date.now(),by:"Points",text:`${m.name} +${pts}: ${text}`,code:"",name:""});save()}
+const prodName=id=>{const p=S.productions.find(x=>x.id===id);return p?p.name+" · "+p.degree:""};
+const sampleNote=`<p class="note">Sample people with invented names. In the live system members are contacts in the Valley's account; volunteers and candidates sign up from forms in the member portal.</p>`;
+
+/* ---------- reunion ---------- */
+let rDay=0, rFilter="All", rCode="";
+function reunion(el){
+  const d=SCHEDULE[rDay];
+  el.innerHTML=`<div class="grid g4">
+    <div class="panel tile"><span class="n">${S.candidates.filter(c=>c.status==="Checked in"||c.status==="Conferred").length}/${S.candidates.length}</span><span class="l">Candidates checked in</span></div>
+    <div class="panel tile"><span class="n">${S.members.filter(m=>m.checkedIn).length}/${S.members.length}</span><span class="l">Volunteers checked in</span></div>
+    <div class="panel tile ${S.slots.some(x=>!x.member)?"alert":""}"><span class="n">${S.slots.filter(x=>!x.member).length}</span><span class="l">Cast roles still open</span></div>
+    <div class="panel tile"><span class="n">${S.productions.filter(p=>p.stage==="Reset").length}/${S.productions.length}</span><span class="l">Productions reset</span></div></div>
+  <div class="grid g32">
+    <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Schedule · run of show</h2>
+      <div class="row"><div class="seg" role="group" aria-label="Day">${SCHEDULE.map((x,k)=>`<button type="button" data-day="${k}" aria-pressed="${k===rDay}">${x.day.split(",")[0]}</button>`).join("")}</div>
+      <select id="rFilter" aria-label="Who">${["All","Crew","Cast","Candidates"].map(f=>`<option ${f===rFilter?"selected":""}>${f}</option>`).join("")}</select></div></div>
+      <p class="small muted" style="margin:6px 0 10px">${esc(d.day)}</p>
+      <ul class="pull">${d.items.filter(i=>rFilter==="All"||i[2]===rFilter||i[2]==="All").map(i=>`<li><span class="code" style="min-width:70px">${i[0]}</span><span>${esc(i[1])}</span><span class="pill">${i[2]}</span></li>`).join("")}</ul>
+      <p class="note" style="margin-top:12px">In the live system the schedule is a calendar in the Valley's account. Each item can send its own reminder, and crew call times feed the productions board.</p></div>
+    <div class="panel scanbox"><h2>Check-in</h2>
+      <p class="small muted" style="margin:0">Scan a member's badge or a candidate's confirmation QR, or type the code. Volunteers earn ${POINTS.checkin} points for checking in.</p>
+      ${camBtn("Scan badge with camera")}
+      <form class="scanfield" id="ciForm"><input id="ciIn" autocomplete="off" placeholder="MBR-001 or CND-001" value="${esc(rCode)}" aria-label="Badge code"><button class="btn primary">Check in</button></form>
+      <div id="ciOut"></div>
+      <h3 style="margin-top:6px">Not checked in yet</h3>
+      <div class="quick">${S.members.filter(m=>!m.checkedIn).map(m=>`<button type="button" data-ci="${m.id}">${m.id} ${esc(m.name)}</button>`).join("")}${S.candidates.filter(c=>c.status==="Registered"||c.status==="Confirmed").map(c=>`<button type="button" data-ci="${c.id}">${c.id} ${esc(c.name)}</button>`).join("")}</div>
+    </div></div>${sampleNote}`;
+  el.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{rDay=+b.dataset.day;render()});
+  $("#rFilter").onchange=e=>{rFilter=e.target.value;render()};
+  const checkin=code=>{
+    code=code.trim().toUpperCase(); rCode="";
+    const m=mem(code), c=S.candidates.find(x=>x.id===code);
+    if(m){ if(m.checkedIn){$("#ciOut").innerHTML=`<div class="banner ok">${esc(m.name)} is already checked in.</div>`;return}
+      m.checkedIn=true; award(m.id,POINTS.checkin,"Checked in at the Fall Reunion"); toast(m.name+" checked in · +"+POINTS.checkin+" points"); render(); return}
+    if(c){ if(c.status==="Checked in"||c.status==="Conferred"){$("#ciOut").innerHTML=`<div class="banner ok">${esc(c.name)} is already checked in.</div>`;return}
+      if(c.status==="Registered"){$("#ciOut").innerHTML=`<div class="banner bad">${esc(c.name)} is registered but not confirmed. Confirm the registration at the desk first.</div>`;return}
+      c.status="Checked in"; save(); toast(c.name+" checked in"); render(); return}
+    $("#ciOut").innerHTML=`<div class="banner bad">No member or candidate with code “${esc(code)}”.</div>`;
+  };
+  $("#ciForm").addEventListener("submit",e=>{e.preventDefault();checkin($("#ciIn").value)});
+  bindCam(el,checkin);
+  el.querySelectorAll("[data-ci]").forEach(b=>b.onclick=()=>checkin(b.dataset.ci));
+}
+
+/* ---------- degree sign-ups (candidates) ---------- */
+function candidates(el){
+  el.innerHTML=`<div class="kanban" style="grid-template-columns:repeat(4,minmax(200px,1fr))">${CAND_STAGES.map(st=>`<div class="col"><h4>${st}<span>${S.candidates.filter(c=>c.status===st).length}</span></h4>${S.candidates.filter(c=>c.status===st).map(c=>`<div class="card"><b>${esc(c.name)}</b><span class="muted">${esc(c.degrees)} · <span class="code">${c.id}</span></span><span class="small muted">From ${esc(c.from)}</span>${CAND_STAGES.indexOf(st)<3?`<div class="row"><button class="btn" data-cadv="${c.id}">Move to ${CAND_STAGES[CAND_STAGES.indexOf(st)+1]}</button></div>`:""}</div>`).join("")}</div>`).join("")}</div>
+  <div class="grid g2">
+    <div class="panel"><h2>Degree sign-up form</h2>
+      <p class="small muted" style="margin-top:0">What a candidate or his lodge sponsor fills in. In the live system it's a form on the Valley's site that creates the contact and the card above.</p>
+      <form id="candForm" class="scanbox">
+        <input type="text" id="cName" placeholder="Full name" required aria-label="Full name">
+        <select id="cDeg" aria-label="Degrees"><option>4°–14°</option><option>15°–18°</option><option>19°–32°</option><option>4°–32°</option></select>
+        <select id="cFrom" aria-label="How did you hear"><option>Website form</option><option>Lodge sponsor (sample)</option><option>Event table</option></select>
+        <button class="btn primary" style="align-self:flex-start">Sign up for the Fall Reunion</button>
+      </form></div>
+    <div class="panel"><h2>What happens next</h2><ul class="pull">
+      <li><span class="st st-Ready">Auto</span><span>Welcome email with what to expect (Communications)</span><span></span></li>
+      <li><span class="st st-Pulled">Desk</span><span>Registration confirmed; fees through the Valley's own invoices when they choose (not part of this demo)</span><span></span></li>
+      <li><span class="st st-In-use">Reunion</span><span>Scanned in at check-in; class lists by degree for the directors</span><span></span></li>
+      <li><span class="st st-Cleaning">After</span><span>Marked conferred; the record keeps his degree history</span><span></span></li></ul></div></div>${sampleNote}`;
+  el.querySelectorAll("[data-cadv]").forEach(b=>b.onclick=()=>{const c=S.candidates.find(x=>x.id===b.dataset.cadv);c.status=CAND_STAGES[CAND_STAGES.indexOf(c.status)+1];save();render();toast(c.name+" moved to "+c.status)});
+  $("#candForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#cName").value.trim();if(!n)return;const id="CND-"+String(S.candidates.length+1).padStart(3,"0");S.candidates.push({id,name:n,degrees:$("#cDeg").value,status:"Registered",from:$("#cFrom").value});save();render();toast(n+" signed up · welcome email queued for approval");S.queue.unshift({t:Date.now(),tpl:"Candidate welcome and what to expect",to:n,ch:"Email"});save()});
+}
+
+/* ---------- cast sign-ups ---------- */
+function cast(el){
+  const castMembers=S.members.filter(m=>m.interest.includes("Cast"));
+  el.innerHTML=`<div class="grid g2">${S.productions.map(p=>`<div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(p.name)} · ${p.degree}</h2><span class="pill">${esc(p.stage)}</span></div><p class="small muted" style="margin:4px 0 8px">${esc(p.date)}</p>
+     <ul class="pull">${S.slots.filter(sl=>sl.prod===p.id).map(sl=>{const m=sl.member&&mem(sl.member);return `<li><span class="st ${sl.status==="Confirmed"?"st-Ready":sl.status==="Signed up"?"st-Pulled":"st-Repair"}">${sl.status}</span><span><b>${esc(sl.role)}</b><br>${m?`<span class="small">${esc(m.name)} <span class="code muted">${m.id}</span></span>`:`<select data-pick-slot="${sl.id}" aria-label="Sign up a member for ${esc(sl.role)}"><option value="">Sign up a member…</option>${castMembers.map(c=>`<option value="${c.id}">${esc(c.name)} · ${c.points} pts</option>`).join("")}</select>`}</span>${sl.status==="Signed up"?`<button class="btn" data-confirm="${sl.id}">Confirm</button>`:sl.status==="Confirmed"?`<button class="btn" data-release="${sl.id}">Release</button>`:"<span></span>"}</li>`}).join("")}</ul></div>`).join("")}</div>
+   <p class="note">Members sign up for open roles from the member portal; the degree director confirms. Confirmed cast get the cast confirmation message and their costume is pulled to their size. Serving earns ${POINTS.cast} volunteer points when the production is returned.</p>${sampleNote}`;
+  el.querySelectorAll("[data-pick-slot]").forEach(s=>s.onchange=()=>{if(!s.value)return;const sl=S.slots.find(x=>x.id===s.dataset.pickSlot);sl.member=s.value;sl.status="Signed up";save();render();toast(mem(s.value).name+" signed up for "+sl.role)});
+  el.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.confirm);sl.status="Confirmed";S.queue.unshift({t:Date.now(),tpl:"Cast confirmation",to:mem(sl.member).name,ch:"Email"});save();render();toast("Confirmed · cast confirmation queued for approval")});
+  el.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.release);sl.member=null;sl.status="Open";save();render();toast("Role reopened")});
+}
+
+/* ---------- volunteer points ---------- */
+let pSel=null;
+function points(el){
+  const ranked=[...S.members].sort((a,b)=>b.points-a.points);
+  const sel=mem(pSel)||ranked[0]; pSel=sel.id;
+  const lvl=p=>p>=60?"Gold":p>=30?"Silver":"Bronze";
+  el.innerHTML=`<div class="grid g32">
+   <div class="panel"><h2>Leaderboard</h2><div class="tablewrap" style="border:0"><table style="min-width:0"><thead><tr><th>#</th><th>Member</th><th>Serves as</th><th>Level</th><th style="text-align:right">Points</th></tr></thead><tbody>${ranked.map((m,k)=>`<tr data-psel="${m.id}" style="${m.id===sel.id?"background:var(--accent-soft)":""}"><td class="muted">${k+1}</td><td><b>${esc(m.name)}</b> <span class="code muted">${m.id}</span>${m.checkedIn?' <span class="st st-Ready">Here</span>':""}</td><td class="small">${m.interest.join(", ")}</td><td>${lvl(m.points)}</td><td style="text-align:right;font-variant-numeric:tabular-nums"><b>${m.points}</b></td></tr>`).join("")}</tbody></table></div></div>
+   <div class="panel scanbox"><h2>${esc(sel.name)} · ${sel.points} points · ${lvl(sel.points)}</h2>
+     <form id="awardForm" class="row"><select id="aWhy" aria-label="Reason">${[["Crew shift","crew"],["Rehearsal","rehearsal"],["Served in a cast role","cast"]].map(([l,k])=>`<option value="${k}">${l} (+${POINTS[k]})</option>`).join("")}</select><button class="btn primary">Award points</button></form>
+     <ul class="log">${sel.log.slice(0,10).map(l=>`<li><time>${when(l.t)}</time> · <b>+${l.pts}</b> ${esc(l.text)}</li>`).join("")}</ul></div></div>
+  <div class="panel"><h2>Point rules (sample values)</h2><ul class="pull">
+    <li><span class="code">+${POINTS.cast}</span><span>Served in a cast role (added automatically when the production is returned)</span><span></span></li>
+    <li><span class="code">+${POINTS.crew}</span><span>Wardrobe or props crew shift</span><span></span></li>
+    <li><span class="code">+${POINTS.checkin}</span><span>Checked in as a reunion volunteer (automatic at check-in)</span><span></span></li>
+    <li><span class="code">+${POINTS.rehearsal}</span><span>Attended a rehearsal</span><span></span></li></ul>
+    <p class="note" style="margin-top:10px">The Valley sets the real values and levels. In the live system points are fields on each member's contact, added by workflows; officers see the leaderboard on their dashboard.</p></div>${sampleNote}`;
+  el.querySelectorAll("[data-psel]").forEach(r=>r.onclick=()=>{pSel=r.dataset.psel;render()});
+  $("#awardForm").addEventListener("submit",e=>{e.preventDefault();const k=$("#aWhy").value;award(sel.id,POINTS[k],$("#aWhy").selectedOptions[0].textContent.replace(/ \(\+\d+\)$/,""));render();toast(sel.name+" +"+POINTS[k]+" points")});
+}
+
+/* ---------- communications ---------- */
+let mSel="cast-confirm";
+function audience(t){
+  if(t.id==="cast-confirm") return S.slots.filter(x=>x.status==="Confirmed").map(x=>({m:mem(x.member),x}));
+  if(t.id==="rehearsal") return S.slots.filter(x=>x.member&&["P3","P4"].includes(x.prod)).map(x=>({m:mem(x.member),x}));
+  if(t.id==="crew-call") return S.members.filter(m=>m.interest.some(i=>i.includes("crew"))).map(m=>({m}));
+  if(t.id==="cand-welcome") return S.candidates.filter(c=>c.status==="Registered"||c.status==="Confirmed").map(c=>({c}));
+  return S.members.filter(m=>m.checkedIn||S.slots.some(x=>x.member===m.id&&x.status==="Confirmed")).map(m=>({m}));
+}
+function fill(t,a){
+  const p=a.x&&S.productions.find(y=>y.id===a.x.prod);
+  const name=a.m?a.m.name:a.c.name;
+  const earned=a.m?a.m.log.filter(l=>Date.now()-l.t<864e5*7).reduce((s,l)=>s+l.pts,0):0;
+  return t.body.replace("{first}",first(name)).replace("{role}",a.x?a.x.role:"").replace("{degree}",p?p.degree:"").replace("{date}",p?p.date.replace(" (sample)",""):"").replace("{call}",p&&p.date.startsWith("Sat")?"6:30 AM":"7:00 AM").replace("{degrees}",a.c?a.c.degrees:"").replace("{pts}",earned).replace("{total}",a.m?a.m.points:"");
+}
+function messages(el){
+  const t=TEMPLATES.find(x=>x.id===mSel), aud=audience(t), ex=aud[0];
+  el.innerHTML=`<div class="grid g32">
+    <div class="panel"><h2>Message templates</h2><ul class="pull">${TEMPLATES.map(x=>`<li><span class="pill">${x.ch}</span><span><button class="btn" style="padding:2px 8px;${x.id===mSel?"border-color:var(--accent)":""}" data-tpl="${x.id}">${esc(x.name)}</button><br><span class="small muted">To: ${esc(x.aud)} · ${audience(x).length} people</span></span><span></span></li>`).join("")}</ul></div>
+    <div class="panel scanbox"><h2>${esc(t.name)}</h2><span class="small muted">${t.ch} to ${esc(t.aud)} · ${aud.length} recipient${aud.length===1?"":"s"}</span>
+      ${ex?`<div class="note" style="white-space:pre-wrap;color:var(--fg);background:var(--sunk)">${esc(fill(t,ex))}</div><span class="small muted">Preview for ${esc(ex.m?ex.m.name:ex.c.name)}</span>`:`<div class="note">Nobody matches this audience yet.</div>`}
+      ${t.ch==="SMS"?`<p class="note" style="margin:0">Texts go out only after the Valley's number is registered with the carriers, and only to members who opted in.</p>`:""}
+      <button class="btn primary" id="queueBtn" ${aud.length?"":"disabled"} style="align-self:flex-start">Queue for officer approval</button></div></div>
+  <div class="panel"><h2>Waiting for approval</h2>${S.queue.length?`<ul class="log">${S.queue.slice(0,12).map(q=>`<li><time>${when(q.t)}</time> · ${esc(q.tpl)} (${q.ch}) to ${esc(q.to)} · <span class="muted">waiting for an officer</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing queued. Confirming a cast member or signing up a candidate queues their message here.</p>`}
+  <p class="note" style="margin-top:10px">Demo: nothing is sent from this page. In the live system an officer approves each batch, and the messages go out from the Valley's own account with their name and reply address.</p></div>`;
+  el.querySelectorAll("[data-tpl]").forEach(b=>b.onclick=()=>{mSel=b.dataset.tpl;render()});
+  $("#queueBtn").onclick=()=>{S.queue.unshift({t:Date.now(),tpl:t.name,to:aud.length+" recipients",ch:t.ch});save();render();toast(t.name+" queued for approval · nothing sent")};
+}
+
+/* ---------- intercom (live between open devices via the room capability) ---------- */
+const CHANNELS=[["all","All crew"],["wardrobe","Wardrobe"],["props","Props"],["stage","Stage manager"]];
+const QUICK={all:["Crew call in 10 minutes","Lunch break, back at 1:30","End-of-day check starting"],wardrobe:["Need a size XL robe at stage left","Mask needed for the 32°, lead please bring it","Costume repair needed in the dressing room"],props:["Lantern missing for scene 2","Set the throne chair upstage","Props reset complete"],stage:["Places in five minutes","Hold, hold, hold","Scene change, go"]};
+const SIM={wardrobe:"Copy. On my way with it.",props:"Copy, props has it.",stage:"Copy, standing by.",all:"Copy that."};
+const PERSONAS=[{id:"MBR-005",role:"Wardrobe crew",ch:"wardrobe"},{id:"MBR-003",role:"Props crew",ch:"props"},{id:"MBR-001",role:"Cast",ch:"all"},{id:"SM",name:"Stage manager (sample)",role:"Stage manager",ch:"stage"}];
+let mode="office", personaId="MBR-005", pTab="today";
+const persona=()=>PERSONAS.find(x=>x.id===personaId)||PERSONAS[0];
+const pname=pp=>pp.name||(mem(pp.id)||{}).name||"Crew member";
+const RADIO={room:null,live:false,peers:[],ch:"wardrobe",dm:null,msgs:[],muted:false,listeners:new Set()};
+function radioMe(){ if(mode==="crew"){const pp=persona();return {name:pname(pp),role:pp.role}} return {name:"Officer (demo)",role:"Office"} }
+function radioPush(m){RADIO.msgs.push(m);RADIO.msgs=RADIO.msgs.slice(-80);RADIO.listeners.forEach(f=>f())}
+function chirp(){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator(),g=a.createGain();o.frequency.value=1200;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.12);setTimeout(()=>a.close(),300)}catch(e){}}
+function speak(text){if(RADIO.muted)return;chirp();try{const u=new SpeechSynthesisUtterance(text);u.rate=1.05;speechSynthesis.speak(u)}catch(e){}}
+const clean=(v,n)=>String(v==null?"":v).replace(/[\u0000-\u001f]/g," ").slice(0,n);
+function radioSend(text){
+  text=clean(text,200).trim(); if(!text) return;
+  const me=radioMe(), m={t:Date.now(),ch:RADIO.dm?"dm":RADIO.ch,to:RADIO.dm||"",from:me.name,role:me.role,text,me:true};
+  radioPush(m);
+  if(RADIO.room&&RADIO.live){RADIO.room.emit("radio",{ch:m.ch,to:m.to,from:m.from,role:m.role,text}).catch(()=>{})}
+  const others=RADIO.peers.filter(x=>!x.isMe).length;
+  if(!others){ // alone: a simulated teammate answers so the demo works on one screen
+    const reply=RADIO.dm?"Copy, heard you.":(SIM[m.ch]||"Copy.");
+    const who=RADIO.dm?RADIO.dm:(m.ch==="wardrobe"?"S. Patel":m.ch==="props"?"M. Chen":m.ch==="stage"?"Stage manager (sample)":"J. Romano");
+    setTimeout(()=>{const r={t:Date.now(),ch:m.ch,to:m.from,from:who===m.from?"Crew lead (sample)":who,role:"simulated reply",text:reply,sim:true};radioPush(r);speak(r.from+": "+reply)},1400);
+  }
+}
+function radioBoot(){
+  const c=window.claude; if(!c||typeof c.use!=="function") return;
+  c.use("room").then(room=>{ if(!room) return; RADIO.room=room;
+    room.onConnection(on=>{RADIO.live=on;RADIO.listeners.forEach(f=>f())},()=>{RADIO.live=false;RADIO.listeners.forEach(f=>f())});
+    room.onPeers(chg=>{RADIO.peers=chg.peers;RADIO.listeners.forEach(f=>f())},()=>{});
+    room.on("radio",msg=>{ if(msg.sameTab) return; const d=msg.data||{};
+      const ch=CHANNELS.some(x=>x[0]===d.ch)||d.ch==="dm"?d.ch:null; if(!ch) return;
+      const me=radioMe(); if(ch==="dm"&&clean(d.to,60)!==me.name) return;
+      const m={t:Date.now(),ch,to:clean(d.to,60),from:clean(d.from,60)||"Someone",role:clean(d.role,40),text:clean(d.text,200),live:true};
+      radioPush(m); if(ch==="dm"||ch==="all"||ch===RADIO.ch) speak(m.from+": "+m.text);
+    },()=>{});
+    radioPresence();
+  }).catch(()=>{});
+}
+function radioPresence(){ if(RADIO.room){const me=radioMe();RADIO.room.presence({who_name:me.name,who_role:me.role,channel:RADIO.ch}).catch(()=>{})} }
+function intercomPanel(host,opts={}){
+  const draw=()=>{
+    const me=radioMe(), others=RADIO.peers.filter(x=>!x.isMe);
+    const feed=RADIO.msgs.filter(m=>RADIO.dm?(m.ch==="dm"&&(m.to===RADIO.dm||m.from===RADIO.dm)):(m.ch===RADIO.ch||m.ch==="all"));
+    const contacts=[...new Set([...S.members.map(x=>x.name),"Stage manager (sample)",...others.map(x=>clean(x.presence.who_name,60)).filter(Boolean)])].filter(n=>n!==me.name);
+    host.innerHTML=`<div class="ic">
+      <div class="row" style="justify-content:space-between"><span class="live ${RADIO.live?"on":""}"><i></i>${RADIO.live?`Live · ${others.length} other device${others.length===1?"":"s"} on`:"Demo mode · replies are simulated"}</span>
+        <label class="opt small"><input type="checkbox" id="icMute" ${RADIO.muted?"":"checked"}> Play aloud</label></div>
+      <div class="chans" role="group" aria-label="Channel">${CHANNELS.map(([k,l])=>`<button type="button" data-ch="${k}" aria-pressed="${!RADIO.dm&&RADIO.ch===k}">${l}</button>`).join("")}
+        <select id="icDm" aria-label="Direct call"><option value="">Direct call…</option>${contacts.map(n=>`<option ${RADIO.dm===n?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+      <ul class="feed" id="icFeed" aria-live="polite">${feed.length?feed.map(m=>`<li class="${m.me?"me":""}"><div class="who">${esc(m.me?"You":m.from)}${m.role?" · "+esc(m.role):""} · ${when(m.t).split(" ").slice(-2).join(" ")}${m.ch==="all"&&RADIO.ch!=="all"&&!RADIO.dm?" · All crew":""}</div>${esc(m.text)}</li>`).join(""):`<li class="small muted" style="background:none">No calls on ${RADIO.dm?esc(RADIO.dm):CHANNELS.find(c=>c[0]===RADIO.ch)[1]} yet. Pick a quick call or type one, then hold Talk.</li>`}</ul>
+      ${RADIO.dm?"":`<div class="quick">${(QUICK[RADIO.ch]||[]).map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}
+      <input type="text" id="icText" maxlength="200" placeholder="${RADIO.dm?"Message "+esc(RADIO.dm):"Call to "+CHANNELS.find(c=>c[0]===RADIO.ch)[1]}" aria-label="Message">
+      <button type="button" class="ptt" id="icPtt">Hold to talk · release to send</button>
+      <p class="small muted" style="margin:0">On a crew phone, hold and speak. This demo page can't use the microphone, so pick or type the call; it's read aloud on every device listening to that channel.</p>
+    </div>`;
+    const f=$("#icFeed",host); f.scrollTop=f.scrollHeight;
+    host.querySelectorAll("[data-ch]").forEach(b=>b.onclick=()=>{RADIO.ch=b.dataset.ch;RADIO.dm=null;radioPresence();draw()});
+    $("#icDm",host).onchange=e=>{RADIO.dm=e.target.value||null;draw()};
+    $("#icMute",host).onchange=e=>{RADIO.muted=!e.target.checked};
+    host.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{$("#icText",host).value=b.dataset.q});
+    const ptt=$("#icPtt",host); let tx=false;
+    const start=e=>{e.preventDefault();tx=true;ptt.classList.add("tx");ptt.textContent="Transmitting… release to send"};
+    const end=()=>{if(!tx)return;tx=false;ptt.classList.remove("tx");const t=$("#icText",host).value;if(!t.trim()){ptt.textContent="Pick or type a call first";setTimeout(()=>{ptt.textContent="Hold to talk · release to send"},1400);return}radioSend(t)};
+    ptt.addEventListener("pointerdown",start); ptt.addEventListener("pointerup",end); ptt.addEventListener("pointerleave",end);
+    ptt.addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter")&&!tx)start(e)}); ptt.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter")end()});
+    $("#icText",host).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();radioSend(e.target.value)}});
+  };
+  RADIO.listeners.add(draw); loops.push(()=>RADIO.listeners.delete(draw)); draw();
+}
+function intercom(el){
+  el.innerHTML=`<div class="grid g32"><div class="panel" id="icHost"></div>
+    <div class="panel"><h2>Who's on</h2><ul class="pull" id="icPeers"></ul>
+    <p class="note" style="margin-top:12px">Channels for each crew, an all-crew channel and direct calls from one person to another. Open this demo on two devices to try it live; on one screen a teammate answers automatically.</p></div></div>`;
+  intercomPanel($("#icHost"));
+  const drawPeers=()=>{const ps=RADIO.peers;$("#icPeers").innerHTML=ps.length?ps.map(x=>`<li><span class="st ${x.isMe?"st-Ready":"st-In-use"}">${x.isMe?"You":"On"}</span><span>${esc(clean(x.presence.who_name,60)||"Someone")}<br><span class="small muted">${esc(clean(x.presence.who_role,40))} · ${esc((CHANNELS.find(c=>c[0]===x.presence.channel)||["","no channel"])[1])}</span></span><span></span></li>`).join(""):`<li class="small muted">Only this screen is connected right now.</li>`};
+  RADIO.listeners.add(drawPeers); loops.push(()=>RADIO.listeners.delete(drawPeers)); drawPeers();
+}
+
+/* ---------- crew app (what a crew or cast member sees on their phone) ---------- */
+const PT_ICONS={today:ICONS.reunion,scan:ICONS.scan,kit:ICONS.guide,radio:ICONS.intercom,points:ICONS.points};
+let pSheet=null, pSeg="where", pStep=99; // pSheet: {kind:"item",code} or {kind:"role",deg,role}
+const OUT=["Pulled","In use"], OK=["Ready","Pulled","In use"];
+const roleOf=code=>{for(const d in KITS)for(const r of KITS[d])if(r.items.includes(code))return {deg:d,role:r.role};return null};
+const stageOf=code=>{for(const d in STAGE_LAYOUT){const k=STAGE_LAYOUT[d].findIndex(sc=>sc.some(x=>x.c===code));if(k>=0)return {deg:d,scene:k}}return null};
+const rolePieces=(deg,role)=>(((KITS[deg]||[]).find(r=>r.role===role)||{items:[]}).items).map(item).filter(i=>i.dept==="Wardrobe").sort((a,b)=>LAYER_ORDER.indexOf(a.type)-LAYER_ORDER.indexOf(b.type));
+const initials=n=>String(n).split(/[ .]+/).filter(Boolean).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+function p3d(host,mount,fail){ // one WebGL view at a time inside the phone
+  if(!have3d()){host.innerHTML=`<div class="loading3d">${fail}</div>`;return null}
+  return mount(host);
+}
+function openSheet(x){pSheet=x;pSeg="where";pStep=99;render();const b=$("#pBody");if(b)b.scrollTop=0}
+function itemSheet(body,i,dept){
+  const isW=i.dept==="Wardrobe", ro=roleOf(i.code), st=stageOf(i.code);
+  const segs=isW?[["where","Where it's stored"],["worn","How it's worn"]]:[["where","Where it's stored"],["stage","On stage"]];
+  if(!segs.some(x=>x[0]===pSeg)) pSeg="where";
+  const out=OUT.includes(i.status);
+  body.innerHTML=`<button class="pback" id="pBack">‹ Back</button>
+    <div class="pcard ${i.high?"hv-card":""}" id="pSheetCard"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span>${chip(i.status)}</div>
+      ${picHtml(i)}<b style="font-size:18px">${esc(i.name)}</b>${i.high?'<span class="hv" style="align-self:flex-start">HIGH VALUE · lead signs it out</span>':""}
+      <div class="ploc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span><b>${esc(i.location)}</b><br><span class="small muted">${out?"Out of storage now. Its spot is held for the return.":"In its spot · "+esc(i.condition)}</span></span></div>
+      <span class="small muted">${i.degree} · ${esc(i.type)}${i.size&&i.size!=="-"?" · size "+esc(i.size):""}</span></div>
+    <div class="seg pseg" role="group" aria-label="View">${segs.map(([k,l])=>`<button type="button" data-pseg="${k}" aria-pressed="${k===pSeg}">${l}</button>`).join("")}</div>
+    <div class="p3d" id="p3d"></div><p class="small muted" id="p3dCap" style="margin:-4px 2px 0"></p><div id="pExtra"></div>
+    ${dept===i.dept?`<div class="pcard" id="pActCard"><h3>Update this piece</h3>${actionsFor(i,"s")}</div>`:""}`;
+  $("#pBack",body).onclick=()=>{pSheet=null;render()};
+  body.querySelectorAll("[data-pseg]").forEach(b=>b.onclick=()=>{pSeg=b.dataset.pseg;render()});
+  if(dept===i.dept) bindActions($("#pActCard",body),i,()=>render());
+  const host=$("#p3d",body), cap=$("#p3dCap",body), extra=$("#pExtra",body);
+  if(pSeg==="where"&&isW){
+    cap.textContent="The wardrobe room. The gold ring marks this piece's spot. Drag to look around.";
+    const hl=p3d(host,w=>mountRoom(w,S.items.filter(x=>x.dept==="Wardrobe"),false,c=>openSheet({kind:"item",code:c}),true),"The 3D room needs WebGL. Go to "+esc(i.location)+".");
+    if(hl) hl(i.code);
+  } else if(pSeg==="where"){
+    host.remove(); cap.remove();
+    extra.innerHTML=`<div class="pcard"><h3>Find it</h3><span>Props storage, <b>${esc(i.location)}</b>.</span><span class="small muted">The props room isn't mapped in 3D in this demo. In the live system the props lead maps it once, like the wardrobe room.</span>${st?`<button class="btn" data-pseg-go="stage" style="align-self:flex-start">See where it goes on stage</button>`:""}</div>`;
+    extra.querySelectorAll("[data-pseg-go]").forEach(b=>b.onclick=()=>{pSeg="stage";render()});
+  } else if(pSeg==="stage"){
+    if(!st){host.remove();cap.textContent="This piece isn't placed on stage in the sample layouts.";return}
+    cap.textContent=`${st.deg} · Scene ${st.scene+1}. The gold ring marks its mark on stage.`;
+    const hl=p3d(host,w=>mountStage(w,STAGE_LAYOUT[st.deg][st.scene],false,c=>openSheet({kind:"item",code:c}),true),"The 3D stage needs WebGL.");
+    if(hl) hl(i.code);
+  } else if(pSeg==="worn"){
+    if(!ro){host.remove();cap.textContent="No sample role uses this piece yet.";return}
+    const pcs=rolePieces(ro.deg,ro.role), k=pcs.findIndex(x=>x.code===i.code);
+    cap.textContent=`${ro.deg} · ${ro.role}, fully dressed. This piece is solid, the rest are see-through. Drag to turn the figure.`;
+    p3d(host,w=>mountDress(w,pcs,pcs.length,i.code),"The 3D figure needs WebGL.");
+    extra.innerHTML=`<div class="pcard"><h3>Step ${k+1} of ${pcs.length} when dressing</h3><span class="small">${esc(DRESS[i.type]||"Dress as shown.")}</span><button class="btn" id="pRoleGo" style="align-self:flex-start">Full dressing steps</button></div>`;
+    $("#pRoleGo",body).onclick=()=>openSheet({kind:"role",deg:ro.deg,role:ro.role});
+  }
+}
+function roleSheet(body,deg,role,{back=true,crewView=false,who=""}={}){
+  const pcs=rolePieces(deg,role); if(pStep>pcs.length) pStep=pcs.length;
+  body.innerHTML=`${back?'<button class="pback" id="pBack">‹ Back</button>':""}
+    <div class="pcard"><h3>${deg} · ${esc(role)}</h3>${who?`<span class="small">Cast: <b>${esc(who)}</b></span>`:""}<span class="small muted">${crewView?"Dress in this order. Tap a step to see it on the figure.":"The wardrobe crew dresses you in this order. Nothing to bring."}</span></div>
+    <div class="p3d" id="p3d"></div>
+    <label class="small muted" for="pStepR">Dressed through step <b id="pStepN">${pStep}</b> of ${pcs.length}</label><input type="range" id="pStepR" min="0" max="${pcs.length}" value="${pStep}">
+    <ol class="steps" id="pSteps">${pcs.map((i,k)=>`<li data-step="${k+1}" class="${k+1===pStep?"on":k+1>pStep?"future":""}"><span><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HV</span>':""}<br><span class="small">${esc(DRESS[i.type]||"")}</span>${crewView?`<br><span class="small muted">${esc(i.location)} · ${chip(i.status)}</span> <button class="btn" style="padding:0 6px;font-size:12px" data-pitem="${i.code}">Find it</button>`:""}</span></li>`).join("")}</ol>`;
+  if(back) $("#pBack",body).onclick=()=>{pSheet=null;render()};
+  const dz=p3d($("#p3d",body),w=>mountDress(w,pcs,pStep),"The 3D figure needs WebGL. The steps below still work.");
+  const set=v=>{pStep=v;$("#pStepN",body).textContent=v;$("#pStepR",body).value=v;body.querySelectorAll("#pSteps li").forEach(li=>{const s=+li.dataset.step;li.className=s===v?"on":s>v?"future":""});dz&&dz.setStep(v)};
+  $("#pStepR",body).oninput=e=>set(+e.target.value);
+  $("#pSteps",body).addEventListener("click",e=>{const f=e.target.closest("[data-pitem]");if(f){openSheet({kind:"item",code:f.dataset.pitem});return}const li=e.target.closest("li");if(li)set(+li.dataset.step)});
+}
+function crewApp(el){
+  const pp=persona(), m=mem(pp.id), isCast=pp.role==="Cast", isSM=pp.role==="Stage manager", dept=pp.role.startsWith("Wardrobe")?"Wardrobe":pp.role.startsWith("Props")?"Props":null;
+  const tabs=[["today","Today"]].concat(dept?[["scan","Scan"]]:[]).concat([["kit",isCast?"My costume":isSM?"Board":"Pull list"],["radio","Intercom"]]).concat(m?[["points","Points"]]:[]);
+  if(!tabs.some(t=>t[0]===pTab)) pTab="today";
+  el.innerHTML=`<p class="small muted" style="margin:0;text-align:center">What ${esc(pname(pp))} (${pp.role.toLowerCase()}) sees on their phone. Switch people with Viewing as, at the top.</p>
+   <div class="phonewrap"><div class="phone" role="region" aria-label="Crew app">
+     <div class="ptop"><span class="pav" aria-hidden="true">${initials(pname(pp))}</span><span style="display:flex;flex-direction:column;min-width:0;flex:1"><b>${esc(pname(pp))}</b><span class="small muted">${pp.role} · Fall Reunion</span></span>${m?`<span class="ppts">${m.points} pts</span>`:""}</div>
+     <div class="pbody" id="pBody"></div>
+     <nav class="ptabs" aria-label="App">${tabs.map(([k,l])=>`<button type="button" data-ptab="${k}" ${k===pTab?'aria-current="page"':""}><svg viewBox="0 0 24 24" aria-hidden="true">${PT_ICONS[k]}</svg>${l}</button>`).join("")}</nav>
+   </div></div>`;
+  el.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptab;pSheet=null;pStep=99;render()});
+  const body=$("#pBody");
+  const nextProd=S.productions.find(x=>x.stage!=="Reset")||S.productions[0];
+  const castIn=role=>{const sl=S.slots.find(x=>x.prod===nextProd.id&&x.role===role&&x.member);return sl?(mem(sl.member)||{}).name:""};
+  if(pSheet&&pSheet.kind==="item"&&item(pSheet.code)){itemSheet(body,item(pSheet.code),dept);return}
+  if(pSheet&&pSheet.kind==="role"){roleSheet(body,pSheet.deg,pSheet.role,{crewView:!!dept,who:castIn(pSheet.role)});return}
+  const pullRows=codes=>codes.map(c=>{const i=item(c),bad=!OK.includes(i.status);return `<li class="pick-row" data-pitem="${c}" tabindex="0" role="button" aria-label="Open ${esc(i.name)}">${chip(i.status)}<span class="small"><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HV</span>':""}<br><span class="muted">${esc(i.location)}</span></span>${bad?'<span class="gap">GAP</span>':i.status==="Ready"&&!i.high?`<button class="btn" data-ppull="${c}">Pull</button>`:"<span></span>"}</li>`}).join("");
+  const bindRows=()=>{body.querySelectorAll("[data-pitem]").forEach(r=>{const go=e=>{if(e.target.closest("[data-ppull]"))return;openSheet({kind:"item",code:r.dataset.pitem})};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter"){go(e)}}});
+    body.querySelectorAll("[data-ppull]").forEach(b=>b.onclick=e=>{e.stopPropagation();const i=item(b.dataset.ppull);act(i,"Pulled",`Pulled for ${nextProd.name} · ${nextProd.degree}`,pname(pp));toast(i.code+" pulled");render()});
+    body.querySelectorAll("[data-prole]").forEach(b=>b.onclick=()=>openSheet({kind:"role",deg:nextProd.degree,role:b.dataset.prole}))};
+  const roleList=()=>`<div class="pcard"><h3>Dress the cast · ${nextProd.degree}</h3>${(KITS[nextProd.degree]||[]).map(r=>`<button class="prole" data-prole="${esc(r.role)}"><span><b>${esc(r.role)}</b><br><span class="small muted">${castIn(r.role)?esc(castIn(r.role)):"Not cast yet"} · ${rolePieces(nextProd.degree,r.role).length} pieces</span></span><span aria-hidden="true">›</span></button>`).join("")}</div>`;
+  if(pTab==="today"){
+    const myRole=["Crew","Cast","All"].filter(w=>isSM||(isCast?w!=="Crew":w!=="Cast"));
+    const slot=m&&S.slots.find(x=>x.member===m.id&&x.status!=="Open");
+    const mine=dept?kitCodes(nextProd).filter(c=>item(c).dept===dept).map(item):[];
+    const done=mine.filter(i=>OUT.includes(i.status)).length, gapsMine=mine.filter(i=>!OK.includes(i.status));
+    body.innerHTML=`${m?`<div class="pcard prow1"><span><h3>Check-in</h3>${m.checkedIn?'<span class="small">You\'re checked in.</span>':`<span class="small muted">+${POINTS.checkin} points</span>`}</span>${m.checkedIn?`<span class="st st-Ready">Checked in</span>`:`<button class="btn primary" id="pCheck">I'm here</button>`}</div>`:""}
+      ${dept?`<div class="pcard"><h3>Your pull list · ${esc(nextProd.name)} · ${nextProd.degree}</h3><div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="${mine.length}" aria-valuenow="${done}"><span style="width:${mine.length?Math.round(done/mine.length*100):0}%"></span></div><span class="small">${done} of ${mine.length} pulled${gapsMine.length?` · <span class="gap">${gapsMine.length} gap</span>`:""}</span><ul class="pull">${pullRows(mine.filter(i=>!OUT.includes(i.status)).slice(0,3).map(i=>i.code))}</ul><button class="btn" data-ptab-go="kit" style="align-self:flex-start">Whole pull list</button></div>`:""}
+      ${dept==="Wardrobe"?roleList():""}
+      ${isCast&&slot?(()=>{const p=S.productions.find(x=>x.id===slot.prod);return `<div class="pcard"><h3>Your role</h3><b>${esc(slot.role)} · ${esc(prodName(slot.prod))}</b><span class="small">${slot.status==="Confirmed"?"Confirmed by the director":"Signed up, waiting for the director to confirm"}</span><button class="btn primary" data-ptab-go="kit" style="align-self:flex-start">See my costume in 3D</button></div>`})():""}
+      ${isCast&&!slot?`<div class="pcard"><h3>Open roles</h3>${S.slots.filter(x=>x.status==="Open").slice(0,3).map(x=>`<div class="row" style="justify-content:space-between"><span class="small">${esc(x.role)} · ${esc(prodName(x.prod))}</span><button class="btn" data-signup="${x.id}">Sign up</button></div>`).join("")||'<span class="small muted">All roles are filled.</span>'}</div>`:""}
+      <div class="pcard"><h3>Today's schedule</h3><ul class="pull">${SCHEDULE[0].items.filter(i=>myRole.includes(i[2])||(isSM&&i[2]==="Candidates")).map(i=>`<li><span class="code">${i[0]}</span><span class="small">${esc(i[1])}</span><span></span></li>`).join("")}</ul></div>`;
+    const ck=$("#pCheck",body); if(ck) ck.onclick=()=>{m.checkedIn=true;award(m.id,POINTS.checkin,"Checked in at the Fall Reunion");toast("Checked in · +"+POINTS.checkin+" points");render()};
+    body.querySelectorAll("[data-signup]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.signup);sl.member=m.id;sl.status="Signed up";save();toast("Signed up for "+sl.role+" · the director will confirm");render()});
+    body.querySelectorAll("[data-ptab-go]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptabGo;render()});
+    bindRows();
+  } else if(pTab==="scan"){
+    body.innerHTML=`<div class="pcard pscan"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS.scan}</svg><b>Scan a tag</b><span class="small muted">Snap the QR on the tag. The piece opens with where it lives and how it's worn.</span>${camBtn("Open camera")}</div>
+      <div class="pcard"><h3>Or type the code</h3><form class="scanfield" id="pScanF"><input id="pScanI" autocomplete="off" placeholder="DEMO-WR-001" aria-label="Item code"><button class="btn primary">Find</button></form>
+      <span class="small muted">Demo: tap a tag to simulate a scan</span><div class="quick">${S.items.filter(i=>i.dept===dept).map(i=>`<button type="button" data-pscan="${i.code}">${i.code.replace("DEMO-","")}</button>`).join("")}</div></div><div id="pScanOut"></div>`;
+    const show=code=>{const i=item(String(code).trim().toUpperCase()),out=$("#pScanOut",body);
+      if(!i){out.innerHTML=`<div class="banner bad">No piece with that code.</div>`;return}
+      if(i.dept!==dept){out.innerHTML=`<div class="banner bad">${i.code} belongs to the ${i.dept} crew.</div>`;return}
+      openSheet({kind:"item",code:i.code})};
+    $("#pScanF",body).addEventListener("submit",e=>{e.preventDefault();show($("#pScanI",body).value)});
+    bindCam(body,show);
+    body.querySelectorAll("[data-pscan]").forEach(b=>b.onclick=()=>show(b.dataset.pscan));
+  } else if(pTab==="kit"){
+    if(isCast){
+      const slot=m&&S.slots.find(x=>x.member===m.id&&x.status!=="Open");
+      if(!slot){body.innerHTML=`<div class="pcard"><span class="small">No role yet. Sign up for an open role on the Today tab.</span></div>`}
+      else{const p=S.productions.find(x=>x.id===slot.prod); roleSheet(body,p.degree,slot.role,{back:false})}
+    } else if(isSM){
+      body.innerHTML=S.productions.map(p=>`<div class="pcard"><b>${esc(p.name)} · ${p.degree}</b><div class="row">${chip(p.stage==="Reset"?"Ready":p.stage==="Planning"?"Retired":"In use").replace(/>[^<]*<\/span>$/,">"+esc(p.stage)+"</span>")}${gaps(p).length?`<span class="gap">${gaps(p).length} kit gap</span>`:""}</div><span class="small muted">${S.slots.filter(x=>x.prod===p.id&&x.member).length}/${S.slots.filter(x=>x.prod===p.id).length} cast</span></div>`).join("");
+    } else {
+      const codes=kitCodes(nextProd).filter(c=>item(c).dept===dept);
+      body.innerHTML=`<div class="pcard"><h3>${esc(nextProd.name)} · ${nextProd.degree}</h3><span class="small muted">Tap a piece to see where it is${dept==="Wardrobe"?" and how it's worn":" and where it goes on stage"}.</span><ul class="pull">${pullRows(codes)||'<li class="small muted">Nothing for your crew in this production.</li>'}</ul></div>${dept==="Wardrobe"?roleList():""}`;
+      bindRows();
+    }
+  } else if(pTab==="radio"){
+    intercomPanel(body);
+  } else if(pTab==="points"&&m){
+    const lvl=m.points>=60?"Gold":m.points>=30?"Silver":"Bronze";
+    body.innerHTML=`<div class="pcard"><h3>Your volunteer points</h3><span style="font-size:34px;font-weight:800;font-variant-numeric:tabular-nums">${m.points}</span><span class="small">${lvl} level · rank ${[...S.members].sort((a,b)=>b.points-a.points).findIndex(x=>x.id===m.id)+1} of ${S.members.length}</span></div>
+      <div class="pcard"><h3>History</h3><ul class="log">${m.log.slice(0,8).map(l=>`<li><time>${when(l.t)}</time> · <b>+${l.pts}</b> ${esc(l.text)}</li>`).join("")}</ul></div>`;
+  }
+}
+/* ---------- viewing as (one menu for office crews and crew-app people) + theme ---------- */
+const OFFICE_AS=[["All","Officers","Everything: inventory, productions, people, reunion",ICONS.dashboard],["Wardrobe","Wardrobe crew","Wardrobe pieces, wardrobe room, dressing guide",ICONS.room],["Props","Props crew","Props, stage layout, pull lists",ICONS.stage]];
+function viewAsLabel(){
+  const o=OFFICE_AS.find(x=>x[0]===crew), pp=persona();
+  $("#vaAv").innerHTML=mode==="crew"?initials(pname(pp)):`<svg viewBox="0 0 24 24">${o[3]}</svg>`;
+  $("#vaName").textContent=mode==="crew"?pname(pp)+" · "+pp.role:o[1];
+  $("#vaDev").textContent=mode==="crew"?"Phone app":"Office";
+}
+function viewAsMenu(){
+  const tick='<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
+  $("#vaMenu").innerHTML=`<div class="vahead">Office screens · desktop</div>${OFFICE_AS.map(([k,l,d,ic])=>`<button type="button" role="menuitemradio" aria-checked="${mode==="office"&&crew===k}" data-as-crew="${k}"><span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24">${ic}</svg></span><span class="t"><b>${l}</b><span>${d}</span></span>${tick}</button>`).join("")}
+    <div class="vahead">Crew app · what each person sees on their phone</div>${PERSONAS.map(x=>`<button type="button" role="menuitemradio" aria-checked="${mode==="crew"&&personaId===x.id}" data-as-person="${x.id}"><span class="ic" aria-hidden="true">${initials(pname(x))}</span><span class="t"><b>${esc(pname(x))}</b><span>${x.role}</span></span>${tick}</button>`).join("")}`;
+}
+function menuOpen(open){const m=$("#vaMenu"),b=$("#vaBtn");if(open)viewAsMenu();m.hidden=!open;b.setAttribute("aria-expanded",String(open));if(open)(m.querySelector('[aria-checked="true"]')||m.querySelector("button")).focus()}
+$("#vaBtn").addEventListener("click",()=>menuOpen($("#vaMenu").hidden));
+document.addEventListener("click",e=>{
+  if(!e.target.closest(".viewas")&&!$("#vaMenu").hidden){menuOpen(false);return}
+  const c=e.target.closest("[data-as-crew]"), p=e.target.closest("[data-as-person]"); if(!c&&!p) return;
+  if(c){mode="office";crew=c.dataset.asCrew}
+  else{mode="crew";personaId=p.dataset.asPerson;pTab="today";pSheet=null;RADIO.ch=persona().ch;RADIO.dm=null}
+  menuOpen(false);radioPresence();closeDrawer();render();window.scrollTo(0,0);$("#vaBtn").focus();
+});
+$("#vaMenu").addEventListener("keydown",e=>{
+  const items=[...$("#vaMenu").querySelectorAll("button")], k=items.indexOf(document.activeElement);
+  if(e.key==="Escape"){menuOpen(false);$("#vaBtn").focus()}
+  else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();items[(k+(e.key==="ArrowDown"?1:-1)+items.length)%items.length].focus()}
+});
+const THEME_KEY="vyntec-valley-theme";
+function isDark(){const t=document.documentElement.dataset.theme;return t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches}
+function themeBtn(){const d=isDark(),b=$("#themeBtn");b.setAttribute("aria-label",d?"Switch to light mode":"Switch to dark mode");b.title=d?"Light mode":"Dark mode";
+  b.innerHTML=d?'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>':'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>'}
+try{const t=localStorage.getItem(THEME_KEY);if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}
+$("#themeBtn").addEventListener("click",()=>{const t=isDark()?"light":"dark";document.documentElement.dataset.theme=t;try{localStorage.setItem(THEME_KEY,t)}catch(e){}themeBtn();render()}); // re-render so the 3D views pick up the new background
+themeBtn();
+
+/* ---------- boot ---------- */
+const h=(location.hash||"").replace("#","");
+if(VIEWS.some(v=>v[0]===h)) view=h;
+render();
+radioBoot();
+})();
+</script>
+
+</body>
+</html>
