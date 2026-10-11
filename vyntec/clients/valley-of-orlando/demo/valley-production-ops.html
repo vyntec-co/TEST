@@ -145,6 +145,11 @@ label.opt{display:inline-flex;gap:6px;align-items:center;font-size:14px}
 .stagewrap{position:relative;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk);aspect-ratio:16/10;max-width:100%}
 .stagewrap canvas{display:block;width:100%;height:100%}
 .loading3d{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px;text-align:center;padding:16px}
+.pick-row{cursor:pointer;border-radius:6px;padding-inline:6px}
+.pick-row:hover{background:var(--sunk)}
+.pick-row.on{background:var(--accent-soft)}
+@media (min-width:981px){.sticky3d{position:sticky;top:calc(76px + env(safe-area-inset-top,0px));align-self:start}}
+.cardslot{position:sticky;top:calc(64px + env(safe-area-inset-top,0px));z-index:2;background:var(--surface)}
 .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:s}
 .steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px;border-radius:6px;border:1px solid transparent;counter-increment:s;cursor:pointer}
 .steps li::before{content:counter(s);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
@@ -632,16 +637,16 @@ function stage(el){
      <div class="seg" role="group" aria-label="Camera"><button type="button" data-cam="3d" aria-pressed="${!sTop}">3D</button><button type="button" data-cam="top" aria-pressed="${sTop}">Top-down plot</button></div>
      <span class="small muted">Generic stage and sample positions. The Valley's props lead sets the real layout.</span></div>
    <div class="grid g32">
-     <div class="stagewrap" id="sWrap"><div class="loading3d" id="sLoad">Loading 3D stage…</div></div>
-     <div class="panel"><div id="sCard"></div><h2>${sDeg} · Scene ${sScene+1}: props on stage</h2><ul class="pull" id="sList"></ul>
+     <div class="stagewrap sticky3d" id="sWrap"><div class="loading3d" id="sLoad">Loading 3D stage…</div></div>
+     <div class="panel"><div id="sCard" class="cardslot"></div><h2>${sDeg} · Scene ${sScene+1}: props on stage</h2><ul class="pull" id="sList"></ul>
        <p class="note" style="margin-top:12px">Tap a prop on the stage or in this list to see its details here. Color shows its status; a red ring marks a piece that isn't ready. In the live system this view sits in the Valley's private guide and links to each prop's record.</p></div></div>`;
   const placed=STAGE_LAYOUT[sDeg][sScene];
-  $("#sList").innerHTML=placed.map(pp=>{const i=item(pp.c);return `<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-pick="${i.code}">${i.code}</button> ${esc(i.name)}<br><span class="small muted">From ${esc(i.location)}</span></span>${i.status==="Ready"||i.status==="Pulled"||i.status==="In use"?"<span></span>":'<span class="gap">GAP</span>'}</li>`}).join("");
+  $("#sList").innerHTML=placed.map(pp=>{const i=item(pp.c);return `<li class="pick-row" data-pick="${i.code}" tabindex="0" role="button" aria-label="Show ${esc(i.name)} on the stage">${chip(i.status)}<span><span class="code">${i.code}</span> ${esc(i.name)}<br><span class="small muted">From ${esc(i.location)}</span></span>${i.status==="Ready"||i.status==="Pulled"||i.status==="In use"?"<span></span>":'<span class="gap">GAP</span>'}</li>`}).join("");
   $("#sDeg").onchange=e=>{sDeg=e.target.value;sScene=0;render()};
   el.querySelectorAll("[data-scene]").forEach(b=>b.onclick=()=>{sScene=+b.dataset.scene;render()});
   el.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.cam==="top";render()});
   const card=code=>{const i=item(code);$("#sCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="sCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close prop details">Close</button></div><b>${esc(i.name)}</b><div class="row">${chip(i.status)}</div><span class="small muted">${esc(i.location)} · ${esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#sCardClose").onclick=()=>{$("#sCard").innerHTML="";highlight(null)}};
-  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{card(b.dataset.pick);highlight(b.dataset.pick)});
+  el.querySelectorAll("[data-pick]").forEach(b=>{const go=()=>{card(b.dataset.pick);highlight(b.dataset.pick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   let highlight=()=>{};
   if(!have3d()){$("#sLoad").textContent="The 3D stage needs WebGL and couldn't load here. The props list still works.";return}
   const wrap=$("#sWrap"); $("#sLoad").remove();
@@ -682,7 +687,7 @@ function stage(el){
   let sel=null;
   const selRing=new THREE.Mesh(new THREE.TorusGeometry(.75,.06,8,48),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.7})); selRing.rotation.x=Math.PI/2; selRing.visible=false; scene.add(selRing);
   highlight=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.25);selRing.position.set(sel.position.x,.54,sel.position.z)}
-    document.querySelectorAll("#sList [data-pick]").forEach(b=>b.closest("li").style.background=b.dataset.pick===code?"var(--accent-soft)":"")};
+    document.querySelectorAll("#sList [data-pick]").forEach(b=>b.classList.toggle("on",b.dataset.pick===code))};
   const ray=new THREE.Raycaster(), v=new THREE.Vector2();
   const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
   let down=null;
@@ -715,15 +720,15 @@ function room(el){
   el.innerHTML=`<div class="filters"><div class="seg" role="group" aria-label="Camera"><button type="button" data-rcam="3d" aria-pressed="${!sTop}">3D</button><button type="button" data-rcam="top" aria-pressed="${sTop}">Floor plan</button></div>
     <span class="small muted">Sample room layout. The wardrobe lead maps the real racks, drawers and shelves once, then every piece shows where it lives.</span></div>
   <div class="grid g32">
-    <div class="stagewrap" id="rWrap"><div class="loading3d" id="rLoad">Loading wardrobe room…</div></div>
-    <div class="panel"><div id="rCard"></div><h2>Where everything lives</h2>
+    <div class="stagewrap sticky3d" id="rWrap"><div class="loading3d" id="rLoad">Loading wardrobe room…</div></div>
+    <div class="panel"><div id="rCard" class="cardslot"></div><h2>Where everything lives</h2>
       <p class="small muted" style="margin-top:0">${its.length} sample pieces (about 300 in the real room) · ${out} out right now, shown as an empty hanger or slot.</p>
-      ${Object.entries(byLoc).map(([loc,list])=>`<h3 style="margin-top:12px">${esc(loc)}</h3><ul class="pull" data-loc>${list.map(i=>`<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-rpick="${i.code}">${i.code}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${i.degree} · size ${esc(i.size)}</span></span><span></span></li>`).join("")}</ul>`).join("")}
+      ${Object.entries(byLoc).map(([loc,list])=>`<h3 style="margin-top:12px">${esc(loc)}</h3><ul class="pull" data-loc>${list.map(i=>`<li class="pick-row" data-rpick="${i.code}" tabindex="0" role="button" aria-label="Show ${esc(i.name)} in the room">${chip(i.status)}<span><span class="code">${i.code}</span> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${i.degree} · size ${esc(i.size)}</span></span><span></span></li>`).join("")}</ul>`).join("")}
     </div></div>`;
   el.querySelectorAll("[data-rcam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.rcam==="top";render()});
-  const card=code=>{const i=item(code);$("#rCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="rCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close piece details">Close</button></div><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span><span class="small muted">${i.status==="Pulled"||i.status==="In use"?"Out of the room now. Its spot is held empty for the return.":esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#rCardClose").onclick=()=>{$("#rCard").innerHTML="";hl(null)}};
+  const card=code=>{const i=item(code);if(matchMedia("(max-width:980px)").matches){const w=$("#rWrap");if(w&&w.getBoundingClientRect().bottom<0)w.scrollIntoView({block:"start",behavior:"smooth"})}$("#rCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="rCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close piece details">Close</button></div><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span><span class="small muted">${i.status==="Pulled"||i.status==="In use"?"Out of the room now. Its spot is held empty for the return.":esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#rCardClose").onclick=()=>{$("#rCard").innerHTML="";hl(null)}};
   let hl=()=>{};
-  el.querySelectorAll("[data-rpick]").forEach(b=>b.onclick=()=>{card(b.dataset.rpick);hl(b.dataset.rpick)});
+  el.querySelectorAll("[data-rpick]").forEach(b=>{const go=()=>{card(b.dataset.rpick);hl(b.dataset.rpick)};b.onclick=go;b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}}});
   if(!have3d()){$("#rLoad").textContent="The 3D room needs WebGL and couldn't load here. The location list still works.";return}
   const wrap=$("#rWrap"); $("#rLoad").remove();
   const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
@@ -772,7 +777,7 @@ function room(el){
   const selRing=add(new THREE.TorusGeometry(.4,.04,8,40),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.8}),0,0,0); selRing.rotation.x=Math.PI/2; selRing.visible=false;
   let sel=null;
   hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.12);selRing.position.set(sel.position.x,.03,sel.position.z)}
-    document.querySelectorAll("#view [data-rpick]").forEach(b=>b.closest("li").style.background=b.dataset.rpick===code?"var(--accent-soft)":"")};
+    document.querySelectorAll("#view [data-rpick]").forEach(b=>b.classList.toggle("on",b.dataset.rpick===code))};
   const ray=new THREE.Raycaster(), v=new THREE.Vector2();
   const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
   let down=null;
