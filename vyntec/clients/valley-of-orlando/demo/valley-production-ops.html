@@ -28,6 +28,7 @@
   --clean:#b49cf0; --clean-soft:#2a2140; --bad:#f08a80; --bad-soft:#3d1a18; --off:#9aa1b0; --off-soft:#232730; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
+label.cam{position:relative;overflow:hidden;cursor:pointer;justify-content:center;align-self:flex-start}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -252,6 +253,7 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 (function(){
 "use strict";
@@ -532,12 +534,29 @@ function bindActions(root,i,after){
 }
 
 /* ---------- scan ---------- */
+/* shortcut: photo snap, not a live viewfinder (the artifact frame refuses live camera streams), upgrade when the demo runs top-level or in the platform app */
+const camBtn=(label="Scan with camera")=>`<label class="btn primary cam">${label}<input type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden"></label>`;
+function bindCam(root,onCode){
+  root.querySelectorAll("label.cam input").forEach(inp=>inp.addEventListener("change",()=>{
+    const f=inp.files&&inp.files[0]; inp.value=""; if(!f) return;
+    if(typeof jsQR!=="function"){toast("The QR reader didn't load. Type the code instead.");return}
+    const img=new Image(), url=URL.createObjectURL(f);
+    img.onload=()=>{URL.revokeObjectURL(url);
+      const k=Math.min(1,1024/Math.max(img.width,img.height)), c=document.createElement("canvas");
+      c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      const x=c.getContext("2d"); x.drawImage(img,0,0,c.width,c.height);
+      const r=jsQR(x.getImageData(0,0,c.width,c.height).data,c.width,c.height);
+      if(r&&r.data) onCode(r.data.trim()); else toast("No QR code found in that photo. Fill the frame with the tag and try again.")};
+    img.onerror=()=>{URL.revokeObjectURL(url);toast("Couldn't read that photo.")};
+    img.src=url}));
+}
 function scan(el){
   const its=visible();
   el.innerHTML=`<div class="grid g32">
    <div class="panel scanbox">
      <h2>Scan a label</h2>
-     <p class="small muted" style="margin:0">Point a handheld scanner at a tag (it types the code and presses Enter), or type a code. On the live system a phone camera opens the piece straight from its QR tag.</p>
+     <p class="small muted" style="margin:0">Tap <b>Scan with camera</b> and snap the tag's QR, use a handheld scanner (it types the code and presses Enter), or type a code.</p>
+     ${camBtn()}
      <form class="scanfield" id="scanForm"><input id="scanIn" autocomplete="off" placeholder="DEMO-WR-001" value="${esc(scanCode)}" aria-label="Item code"><button class="btn primary">Find</button></form>
      <div><span class="small muted">Tap to simulate a scan:</span><div class="quick" style="margin-top:6px">${its.map(i=>`<button type="button" data-scan="${i.code}">${i.code}</button>`).join("")}</div></div>
    </div>
@@ -554,6 +573,7 @@ function scan(el){
     bindActions(card,i,()=>{show(i.code)});
   };
   $("#scanForm").addEventListener("submit",e=>{e.preventDefault();show($("#scanIn").value)});
+  bindCam(el,code=>{$("#scanIn").value=code;show(code)});
   el.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>{$("#scanIn").value=b.dataset.scan;show(b.dataset.scan)}));
   show(scanCode);
   $("#scanIn").focus();
@@ -866,6 +886,7 @@ function reunion(el){
       <p class="note" style="margin-top:12px">In the live system the schedule is a calendar in the Valley's account. Each item can send its own reminder, and crew call times feed the productions board.</p></div>
     <div class="panel scanbox"><h2>Check-in</h2>
       <p class="small muted" style="margin:0">Scan a member's badge or a candidate's confirmation QR, or type the code. Volunteers earn ${POINTS.checkin} points for checking in.</p>
+      ${camBtn("Scan badge with camera")}
       <form class="scanfield" id="ciForm"><input id="ciIn" autocomplete="off" placeholder="MBR-001 or CND-001" value="${esc(rCode)}" aria-label="Badge code"><button class="btn primary">Check in</button></form>
       <div id="ciOut"></div>
       <h3 style="margin-top:6px">Not checked in yet</h3>
@@ -884,6 +905,7 @@ function reunion(el){
     $("#ciOut").innerHTML=`<div class="banner bad">No member or candidate with code “${esc(code)}”.</div>`;
   };
   $("#ciForm").addEventListener("submit",e=>{e.preventDefault();checkin($("#ciIn").value)});
+  bindCam(el,checkin);
   el.querySelectorAll("[data-ci]").forEach(b=>b.onclick=()=>checkin(b.dataset.ci));
 }
 
@@ -1079,7 +1101,7 @@ function crewApp(el){
     body.querySelectorAll("[data-signup]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.signup);sl.member=m.id;sl.status="Signed up";save();toast("Signed up for "+sl.role+" · the director will confirm");render()});
     body.querySelectorAll("[data-ptab-go]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptabGo;render()});
   } else if(pTab==="scan"){
-    body.innerHTML=`<div class="pcard"><h3>Scan a tag</h3><form class="scanfield" id="pScanF"><input id="pScanI" autocomplete="off" placeholder="Code on the tag" aria-label="Item code"><button class="btn primary">Find</button></form>
+    body.innerHTML=`<div class="pcard"><h3>Scan a tag</h3>${camBtn()}<form class="scanfield" id="pScanF"><input id="pScanI" autocomplete="off" placeholder="Code on the tag" aria-label="Item code"><button class="btn primary">Find</button></form>
       <div class="quick">${S.items.filter(i=>i.dept===dept).map(i=>`<button type="button" data-pscan="${i.code}">${i.code.replace("DEMO-","")}</button>`).join("")}</div></div><div id="pScanOut"></div>`;
     const show=code=>{const i=item(String(code).trim().toUpperCase()),out=$("#pScanOut",body);
       if(!i){out.innerHTML=`<div class="banner bad">No piece with that code.</div>`;return}
@@ -1087,6 +1109,7 @@ function crewApp(el){
       out.innerHTML=`<div class="pcard ${i.high?"hv-card":""}" id="pScanCard"><span class="code muted">${i.code}</span><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small muted">${esc(i.location)} · size ${esc(i.size)}</span>${actionsFor(i,"s")}</div>`;
       bindActions($("#pScanCard",body),i,()=>show(i.code))};
     $("#pScanF",body).addEventListener("submit",e=>{e.preventDefault();show($("#pScanI",body).value)});
+    bindCam(body,show);
     body.querySelectorAll("[data-pscan]").forEach(b=>b.onclick=()=>show(b.dataset.pscan));
   } else if(pTab==="kit"){
     if(isCast){
