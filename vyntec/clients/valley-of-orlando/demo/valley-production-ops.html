@@ -655,7 +655,7 @@ function stage(el){
   box(10,3.8,.15,M(0x161a22),0,2.4,-4.25);      // back wall
   // floor marks: centre line + quadrant labels as thin strips
   box(.04,.02,6,M(0xe0c48a),0,.51,-1);
-  const meshes={};
+  const meshes={}, hits=[];
   placed.forEach(pp=>{
     const i=item(pp.c); const st=i.status; const color=hexOf(STATUS_VAR[st]);
     const m=M(color,{emissive:color,emissiveIntensity:.18});
@@ -666,12 +666,23 @@ function stage(el){
     else if(i.type==="Set dressing"){g=new THREE.Mesh(new THREE.BoxGeometry(1.2,i.name==="Banner"?1.8:.06,i.name==="Banner"?.05:.8),m);g.position.set(pp.x,i.name==="Banner"?1.6:.55,pp.z)}
     else {g=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.5,20),m);g.position.set(pp.x,.75,pp.z)}
     g.userData.code=i.code; scene.add(g); meshes[i.code]=g;
+    const hit=new THREE.Mesh(new THREE.CylinderGeometry(.7,.7,2.4,16),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+    hit.position.set(pp.x,1.2,pp.z); hit.userData.code=i.code; scene.add(hit); hits.push(hit);
+    const cv=document.createElement("canvas"); cv.width=256; cv.height=64; const cx=cv.getContext("2d");
+    cx.fillStyle="rgba(23,26,33,.86)"; cx.fillRect(0,0,256,64); cx.fillStyle="#fff"; cx.font="600 26px IBM Plex Mono, monospace"; cx.textAlign="center"; cx.textBaseline="middle"; cx.fillText(i.code.replace("DEMO-",""),128,33);
+    const lab=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false})); lab.scale.set(1.1,.28,1); lab.position.set(pp.x,2.35,pp.z); lab.userData.code=i.code; scene.add(lab); hits.push(lab);
     if(!["Ready","Pulled","In use"].includes(st)){const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.04,8,40),M(hexOf("--bad"),{emissive:hexOf("--bad"),emissiveIntensity:.6}));ring.rotation.x=Math.PI/2;ring.position.set(pp.x,.53,pp.z);scene.add(ring)}
   });
   let sel=null;
-  highlight=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;if(sel)sel.scale.setScalar(1.25)};
+  const selRing=new THREE.Mesh(new THREE.TorusGeometry(.75,.06,8,48),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.7})); selRing.rotation.x=Math.PI/2; selRing.visible=false; scene.add(selRing);
+  highlight=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.25);selRing.position.set(sel.position.x,.54,sel.position.z)}
+    document.querySelectorAll("#sList [data-pick]").forEach(b=>b.closest("li").style.background=b.dataset.pick===code?"var(--accent-soft)":"")};
   const ray=new THREE.Raycaster(), v=new THREE.Vector2();
-  r.domElement.addEventListener("click",e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const hit=ray.intersectObjects(Object.values(meshes),true)[0];if(hit){let o=hit.object;while(o&&!o.userData.code)o=o.parent;if(o){card(o.userData.code);highlight(o.userData.code)}}});
+  const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
+  let down=null;
+  r.domElement.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}},true);
+  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(moved>6)return;const c=pick(e);if(c){card(c);highlight(c)}},true);
+  r.domElement.addEventListener("pointermove",e=>{if(e.buttons)return;r.domElement.style.cursor=pick(e)?"pointer":"grab"});
   let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)sel.rotation.y=(performance.now()-t0)/900;r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
   const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
   loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
