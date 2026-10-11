@@ -27,6 +27,9 @@ Live status inside the 3D viewer is **not** in the demo: a page can't safely rea
 | M | Volunteer points | Contact fields **Volunteer points** + **Level**; workflows add points on check-in, crew shift, rehearsal, served role; leaderboard via smart list sorted by points | fields API; workflows UI | fields REAL |
 | N | Communications | Email/SMS **templates** + workflows, officer approval before each batch; SMS only after A2P registration and opt-in | templates API (REAL, piloted VT-872); workflows UI | REAL / INFERRED |
 
+| O | Crew / member app (what each person sees) | The platform's member portal and mobile app: Today (check-in, my role or pull list, schedule), Scan, My role, Points | portal/app UI | INFERRED |
+| P | Intercom (channels + person to person) | **Not native.** The platform has internal team chat (INFERRED) but no push-to-talk voice. Options: text channels in the platform's app, plus a radio app for voice; or a custom add-on. Decide in discovery. The demo runs it live between open devices and reads calls aloud. | — | gap |
+
 ## 2. Inventory Item fields (DEMO)
 Item code (DEMO-WR-001…) · Department (Wardrobe / Props) · Type · Degree · Role · Size · Location (rack/bin/cabinet) · Status (Ready / Pulled / In use / Cleaning / Repair / Retired) · Condition · High value (checkbox) · Insured value · Photo · Last production (text)
 Seed: `clients/test-lab/backups/VT-875-valley-demo-seed.json` (22 records: 10 wardrobe, 10 props, 2 masks; also the bulk backup).

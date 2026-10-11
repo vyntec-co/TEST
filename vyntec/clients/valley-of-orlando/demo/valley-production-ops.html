@@ -27,6 +27,7 @@
   --ok:#5fcf8f; --ok-soft:#173326; --warn:#e8b45a; --warn-soft:#3a2c12; --info:#7fb2f0; --info-soft:#16283f;
   --clean:#b49cf0; --clean-soft:#2a2140; --bad:#f08a80; --bad-soft:#3d1a18; --off:#9aa1b0; --off-soft:#232730; color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -164,6 +165,35 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 .label .qr img,.label .qr canvas{width:104px!important;height:104px!important}
 .label b{font-family:var(--mono);font-size:12px}
 .label span{font-size:11.5px;line-height:1.3}
+/* crew app (phone) */
+.phonewrap{display:flex;justify-content:center;padding-block:8px 24px}
+.phone{width:390px;max-width:100%;height:780px;max-height:calc(100vh - 140px);min-height:560px;border:10px solid #0b0d12;border-radius:40px;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+.phone .ptop{padding:14px 16px 10px;background:var(--surface);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.phone .ptop b{font-size:17px}
+.phone .pbody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.phone .ptabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-top:1px solid var(--line);background:var(--surface)}
+.phone .ptabs button{border:0;background:none;padding:8px 2px 10px;font-size:11px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.phone .ptabs button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.phone .ptabs button[aria-current="page"]{color:var(--accent)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.pcard h3{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+@media (max-width:760px){.phone{border:0;border-radius:0;height:auto;max-height:none;min-height:calc(100vh - 120px);box-shadow:none;width:100%}.phonewrap{padding:0}}
+/* intercom */
+.ic{display:flex;flex-direction:column;gap:10px;min-height:0}
+.ic .chans{display:flex;gap:6px;flex-wrap:wrap}
+.ic .chans button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700}
+.ic .chans button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.ic .feed{list-style:none;margin:0;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--sunk);border-radius:10px;max-height:320px;min-height:160px;overflow-y:auto}
+.ic .feed li{background:var(--surface);border-radius:10px;padding:8px 10px;max-width:88%;font-size:14px}
+.ic .feed li.me{align-self:flex-end;background:var(--accent-soft)}
+.ic .feed li .who{font-size:12px;color:var(--muted);font-weight:600}
+.ic .quick button{font-family:var(--sans);font-size:13px;text-align:left}
+.ic .ptt{width:100%;border:0;border-radius:14px;padding:16px;font-weight:800;font-size:16px;background:var(--accent);color:var(--accent-fg);touch-action:none;user-select:none;-webkit-user-select:none}
+.ic .ptt.tx{background:var(--bad);animation:pulse 1s infinite}
+@keyframes pulse{50%{filter:brightness(1.2)}}
+.ic .live{font-size:12px;font-weight:700;display:inline-flex;gap:6px;align-items:center}
+.ic .live i{width:8px;height:8px;border-radius:50%;background:var(--off);display:inline-block}
+.ic .live.on i{background:var(--ok)}
 /* toast */
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:14px;font-weight:600;z-index:40;max-width:calc(100% - 32px)}
 .banner{border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:14px}
@@ -201,7 +231,12 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
       <h1 id="viewTitle">Dashboard</h1>
       <span class="pill demo">DEMO · sample data</span>
       <span class="spacer"></span>
-      <span class="small muted">Viewing as</span>
+      <div class="seg" role="group" aria-label="Screen" id="modeSeg">
+        <button type="button" data-mode="office" aria-pressed="true">Office view</button>
+        <button type="button" data-mode="crew" aria-pressed="false">Crew app</button>
+      </div>
+      <select id="personaSel" aria-label="Crew member" hidden></select>
+      <span class="small muted" id="viewingLbl">Viewing as</span>
       <div class="seg" role="group" aria-label="Crew view" id="crewSeg">
         <button type="button" data-crew="All" aria-pressed="true">Officers</button>
         <button type="button" data-crew="Wardrobe" aria-pressed="false">Wardrobe crew</button>
@@ -332,6 +367,7 @@ const ICONS = {
  productions:'<path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v6h-4z"/>',
  guide:'<circle cx="12" cy="5" r="2.2"/><path d="M8 21l1.5-9h5L16 21M9 12l-3 4M15 12l3 4M9.5 8.5h5"/>',
  stage:'<path d="M3 20h18M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/>',
+ intercom:'<rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4M10 14h4"/>',
  room:'<path d="M4 6h16M6 6v14M18 6v14"/><path d="M9 6l1 3M13 6l1 3"/><path d="M8.5 9h3l.5 6h-4zM12.5 9h3l.5 6h-4z"/>',
  labels:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>',
  reunion:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
@@ -340,7 +376,7 @@ const ICONS = {
  points:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"/>',
  messages:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'
 };
-const VIEWS = [["dashboard","Dashboard"],["reunion","Reunion"],["candidates","Degree sign-ups"],["cast","Cast sign-ups"],["productions","Productions"],["inventory","Inventory"],["scan","Scan"],["guide","Dressing guide"],["room","Wardrobe room"],["stage","Stage layout"],["labels","QR labels"],["points","Volunteer points"],["messages","Communications"]];
+const VIEWS = [["dashboard","Dashboard"],["reunion","Reunion"],["candidates","Degree sign-ups"],["cast","Cast sign-ups"],["productions","Productions"],["inventory","Inventory"],["scan","Scan"],["guide","Dressing guide"],["room","Wardrobe room"],["stage","Stage layout"],["labels","QR labels"],["points","Volunteer points"],["messages","Communications"],["intercom","Intercom"]];
 const HIDE={Wardrobe:["stage"],Props:["room","guide"]};
 const navViews=()=>VIEWS.filter(v=>!(HIDE[crew]||[]).includes(v[0]));
 function renderNav(){
@@ -358,10 +394,15 @@ $("#resetBtn").addEventListener("click",()=>{S=seedSlots(seed());save();closeDra
 
 /* ---------- views ---------- */
 function render(){
+  const crewMode = mode==="crew";
+  document.querySelector(".nav").hidden = crewMode;
+  $("#crewSeg").hidden = crewMode; $("#viewingLbl").hidden = crewMode; $("#personaSel").hidden = !crewMode;
+  document.querySelector(".app").style.gridTemplateColumns = crewMode ? "minmax(0,1fr)" : "";
+  if(crewMode){ stopLoops(); $("#viewTitle").textContent="Crew app"; $("#view").innerHTML=""; crewApp($("#view")); return }
   renderNav();
   $("#viewTitle").textContent = VIEWS.find(v=>v[0]===view)[1];
   stopLoops();
-  const f = {dashboard,inventory,scan,productions,guide,stage,room,labels,reunion,candidates,cast,points,messages}[view];
+  const f = {dashboard,inventory,scan,productions,guide,stage,room,labels,reunion,candidates,cast,points,messages,intercom}[view];
   $("#view").innerHTML = ""; f($("#view"));
 }
 
@@ -928,9 +969,153 @@ function messages(el){
   $("#queueBtn").onclick=()=>{S.queue.unshift({t:Date.now(),tpl:t.name,to:aud.length+" recipients",ch:t.ch});save();render();toast(t.name+" queued for approval · nothing sent")};
 }
 
+/* ---------- intercom (live between open devices via the room capability) ---------- */
+const CHANNELS=[["all","All crew"],["wardrobe","Wardrobe"],["props","Props"],["stage","Stage manager"]];
+const QUICK={all:["Crew call in 10 minutes","Lunch break, back at 1:30","End-of-day check starting"],wardrobe:["Need a size XL robe at stage left","Mask needed for the 32°, lead please bring it","Costume repair needed in the dressing room"],props:["Lantern missing for scene 2","Set the throne chair upstage","Props reset complete"],stage:["Places in five minutes","Hold, hold, hold","Scene change, go"]};
+const SIM={wardrobe:"Copy. On my way with it.",props:"Copy, props has it.",stage:"Copy, standing by.",all:"Copy that."};
+const PERSONAS=[{id:"MBR-005",role:"Wardrobe crew",ch:"wardrobe"},{id:"MBR-003",role:"Props crew",ch:"props"},{id:"MBR-001",role:"Cast",ch:"all"},{id:"SM",name:"Stage manager (sample)",role:"Stage manager",ch:"stage"}];
+let mode="office", personaId="MBR-005", pTab="today";
+const persona=()=>PERSONAS.find(x=>x.id===personaId)||PERSONAS[0];
+const pname=pp=>pp.name||(mem(pp.id)||{}).name||"Crew member";
+const RADIO={room:null,live:false,peers:[],ch:"wardrobe",dm:null,msgs:[],muted:false,listeners:new Set()};
+function radioMe(){ if(mode==="crew"){const pp=persona();return {name:pname(pp),role:pp.role}} return {name:"Officer (demo)",role:"Office"} }
+function radioPush(m){RADIO.msgs.push(m);RADIO.msgs=RADIO.msgs.slice(-80);RADIO.listeners.forEach(f=>f())}
+function chirp(){try{const a=new (window.AudioContext||window.webkitAudioContext)();const o=a.createOscillator(),g=a.createGain();o.frequency.value=1200;g.gain.value=.05;o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+.12);setTimeout(()=>a.close(),300)}catch(e){}}
+function speak(text){if(RADIO.muted)return;chirp();try{const u=new SpeechSynthesisUtterance(text);u.rate=1.05;speechSynthesis.speak(u)}catch(e){}}
+const clean=(v,n)=>String(v==null?"":v).replace(/[\u0000-\u001f]/g," ").slice(0,n);
+function radioSend(text){
+  text=clean(text,200).trim(); if(!text) return;
+  const me=radioMe(), m={t:Date.now(),ch:RADIO.dm?"dm":RADIO.ch,to:RADIO.dm||"",from:me.name,role:me.role,text,me:true};
+  radioPush(m);
+  if(RADIO.room&&RADIO.live){RADIO.room.emit("radio",{ch:m.ch,to:m.to,from:m.from,role:m.role,text}).catch(()=>{})}
+  const others=RADIO.peers.filter(x=>!x.isMe).length;
+  if(!others){ // alone: a simulated teammate answers so the demo works on one screen
+    const reply=RADIO.dm?"Copy, heard you.":(SIM[m.ch]||"Copy.");
+    const who=RADIO.dm?RADIO.dm:(m.ch==="wardrobe"?"S. Patel":m.ch==="props"?"M. Chen":m.ch==="stage"?"Stage manager (sample)":"J. Romano");
+    setTimeout(()=>{const r={t:Date.now(),ch:m.ch,to:m.from,from:who===m.from?"Crew lead (sample)":who,role:"simulated reply",text:reply,sim:true};radioPush(r);speak(r.from+": "+reply)},1400);
+  }
+}
+function radioBoot(){
+  const c=window.claude; if(!c||typeof c.use!=="function") return;
+  c.use("room").then(room=>{ if(!room) return; RADIO.room=room;
+    room.onConnection(on=>{RADIO.live=on;RADIO.listeners.forEach(f=>f())},()=>{RADIO.live=false;RADIO.listeners.forEach(f=>f())});
+    room.onPeers(chg=>{RADIO.peers=chg.peers;RADIO.listeners.forEach(f=>f())},()=>{});
+    room.on("radio",msg=>{ if(msg.sameTab) return; const d=msg.data||{};
+      const ch=CHANNELS.some(x=>x[0]===d.ch)||d.ch==="dm"?d.ch:null; if(!ch) return;
+      const me=radioMe(); if(ch==="dm"&&clean(d.to,60)!==me.name) return;
+      const m={t:Date.now(),ch,to:clean(d.to,60),from:clean(d.from,60)||"Someone",role:clean(d.role,40),text:clean(d.text,200),live:true};
+      radioPush(m); if(ch==="dm"||ch==="all"||ch===RADIO.ch) speak(m.from+": "+m.text);
+    },()=>{});
+    radioPresence();
+  }).catch(()=>{});
+}
+function radioPresence(){ if(RADIO.room){const me=radioMe();RADIO.room.presence({who_name:me.name,who_role:me.role,channel:RADIO.ch}).catch(()=>{})} }
+function intercomPanel(host,opts={}){
+  const draw=()=>{
+    const me=radioMe(), others=RADIO.peers.filter(x=>!x.isMe);
+    const feed=RADIO.msgs.filter(m=>RADIO.dm?(m.ch==="dm"&&(m.to===RADIO.dm||m.from===RADIO.dm)):(m.ch===RADIO.ch||m.ch==="all"));
+    const contacts=[...new Set([...S.members.map(x=>x.name),"Stage manager (sample)",...others.map(x=>clean(x.presence.who_name,60)).filter(Boolean)])].filter(n=>n!==me.name);
+    host.innerHTML=`<div class="ic">
+      <div class="row" style="justify-content:space-between"><span class="live ${RADIO.live?"on":""}"><i></i>${RADIO.live?`Live · ${others.length} other device${others.length===1?"":"s"} on`:"Demo mode · replies are simulated"}</span>
+        <label class="opt small"><input type="checkbox" id="icMute" ${RADIO.muted?"":"checked"}> Play aloud</label></div>
+      <div class="chans" role="group" aria-label="Channel">${CHANNELS.map(([k,l])=>`<button type="button" data-ch="${k}" aria-pressed="${!RADIO.dm&&RADIO.ch===k}">${l}</button>`).join("")}
+        <select id="icDm" aria-label="Direct call"><option value="">Direct call…</option>${contacts.map(n=>`<option ${RADIO.dm===n?"selected":""}>${esc(n)}</option>`).join("")}</select></div>
+      <ul class="feed" id="icFeed" aria-live="polite">${feed.length?feed.map(m=>`<li class="${m.me?"me":""}"><div class="who">${esc(m.me?"You":m.from)}${m.role?" · "+esc(m.role):""} · ${when(m.t).split(" ").slice(-2).join(" ")}${m.ch==="all"&&RADIO.ch!=="all"&&!RADIO.dm?" · All crew":""}</div>${esc(m.text)}</li>`).join(""):`<li class="small muted" style="background:none">No calls on ${RADIO.dm?esc(RADIO.dm):CHANNELS.find(c=>c[0]===RADIO.ch)[1]} yet. Pick a quick call or type one, then hold Talk.</li>`}</ul>
+      ${RADIO.dm?"":`<div class="quick">${(QUICK[RADIO.ch]||[]).map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join("")}</div>`}
+      <input type="text" id="icText" maxlength="200" placeholder="${RADIO.dm?"Message "+esc(RADIO.dm):"Call to "+CHANNELS.find(c=>c[0]===RADIO.ch)[1]}" aria-label="Message">
+      <button type="button" class="ptt" id="icPtt">Hold to talk · release to send</button>
+      <p class="small muted" style="margin:0">On a crew phone, hold and speak. This demo page can't use the microphone, so pick or type the call; it's read aloud on every device listening to that channel.</p>
+    </div>`;
+    const f=$("#icFeed",host); f.scrollTop=f.scrollHeight;
+    host.querySelectorAll("[data-ch]").forEach(b=>b.onclick=()=>{RADIO.ch=b.dataset.ch;RADIO.dm=null;radioPresence();draw()});
+    $("#icDm",host).onchange=e=>{RADIO.dm=e.target.value||null;draw()};
+    $("#icMute",host).onchange=e=>{RADIO.muted=!e.target.checked};
+    host.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{$("#icText",host).value=b.dataset.q});
+    const ptt=$("#icPtt",host); let tx=false;
+    const start=e=>{e.preventDefault();tx=true;ptt.classList.add("tx");ptt.textContent="Transmitting… release to send"};
+    const end=()=>{if(!tx)return;tx=false;ptt.classList.remove("tx");const t=$("#icText",host).value;if(!t.trim()){ptt.textContent="Pick or type a call first";setTimeout(()=>{ptt.textContent="Hold to talk · release to send"},1400);return}radioSend(t)};
+    ptt.addEventListener("pointerdown",start); ptt.addEventListener("pointerup",end); ptt.addEventListener("pointerleave",end);
+    ptt.addEventListener("keydown",e=>{if((e.key===" "||e.key==="Enter")&&!tx)start(e)}); ptt.addEventListener("keyup",e=>{if(e.key===" "||e.key==="Enter")end()});
+    $("#icText",host).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();radioSend(e.target.value)}});
+  };
+  RADIO.listeners.add(draw); loops.push(()=>RADIO.listeners.delete(draw)); draw();
+}
+function intercom(el){
+  el.innerHTML=`<div class="grid g32"><div class="panel" id="icHost"></div>
+    <div class="panel"><h2>Who's on</h2><ul class="pull" id="icPeers"></ul>
+    <p class="note" style="margin-top:12px">Channels for each crew, an all-crew channel and direct calls from one person to another. Open this demo on two devices to try it live; on one screen a teammate answers automatically.</p></div></div>`;
+  intercomPanel($("#icHost"));
+  const drawPeers=()=>{const ps=RADIO.peers;$("#icPeers").innerHTML=ps.length?ps.map(x=>`<li><span class="st ${x.isMe?"st-Ready":"st-In-use"}">${x.isMe?"You":"On"}</span><span>${esc(clean(x.presence.who_name,60)||"Someone")}<br><span class="small muted">${esc(clean(x.presence.who_role,40))} · ${esc((CHANNELS.find(c=>c[0]===x.presence.channel)||["","no channel"])[1])}</span></span><span></span></li>`).join(""):`<li class="small muted">Only this screen is connected right now.</li>`};
+  RADIO.listeners.add(drawPeers); loops.push(()=>RADIO.listeners.delete(drawPeers)); drawPeers();
+}
+
+/* ---------- crew app (what a crew or cast member sees on their phone) ---------- */
+const PT_ICONS={today:ICONS.reunion,scan:ICONS.scan,kit:ICONS.guide,radio:ICONS.intercom,points:ICONS.points};
+function crewApp(el){
+  const pp=persona(), m=mem(pp.id), isCast=pp.role==="Cast", isSM=pp.role==="Stage manager", dept=pp.role.startsWith("Wardrobe")?"Wardrobe":pp.role.startsWith("Props")?"Props":null;
+  $("#personaSel").innerHTML=PERSONAS.map(x=>`<option value="${x.id}" ${x.id===pp.id?"selected":""}>${esc(pname(x))} · ${x.role}</option>`).join("");
+  $("#personaSel").onchange=e=>{personaId=e.target.value;pTab="today";RADIO.ch=persona().ch;RADIO.dm=null;radioPresence();render()};
+  const tabs=[["today","Today"]].concat(dept?[["scan","Scan"]]:[]).concat([["kit",isCast?"My role":isSM?"Board":"Pull list"],["radio","Intercom"]]).concat(m?[["points","Points"]]:[]);
+  if(!tabs.some(t=>t[0]===pTab)) pTab="today";
+  el.innerHTML=`<p class="small muted" style="margin:0;text-align:center">What ${esc(pname(pp))} (${pp.role.toLowerCase()}) sees on their phone. Switch people in the top bar.</p>
+   <div class="phonewrap"><div class="phone" role="region" aria-label="Crew app">
+     <div class="ptop"><span class="small muted">Valley of Orlando · Fall Reunion</span><b>${esc(pname(pp))}</b><span class="small muted">${pp.role}${m?` · ${m.points} pts`:""}</span></div>
+     <div class="pbody" id="pBody"></div>
+     <nav class="ptabs" aria-label="App">${tabs.map(([k,l])=>`<button type="button" data-ptab="${k}" ${k===pTab?'aria-current="page"':""}><svg viewBox="0 0 24 24" aria-hidden="true">${PT_ICONS[k]}</svg>${l}</button>`).join("")}</nav>
+   </div></div>`;
+  el.querySelectorAll("[data-ptab]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptab;render()});
+  const body=$("#pBody");
+  const nextProd=S.productions.find(x=>x.stage!=="Reset")||S.productions[0];
+  if(pTab==="today"){
+    const myRole=["Crew","Cast","All"].filter(w=>isSM||(isCast?w!=="Crew":w!=="Cast"));
+    const slot=m&&S.slots.find(x=>x.member===m.id&&x.status!=="Open");
+    const gapsMine=dept?gaps(nextProd).filter(i=>i.dept===dept):[];
+    body.innerHTML=`${m?`<div class="pcard"><h3>Check-in</h3>${m.checkedIn?`<span class="st st-Ready">Checked in</span>`:`<button class="btn primary" id="pCheck">I'm here: check in (+${POINTS.checkin} pts)</button>`}</div>`:""}
+      ${isCast&&slot?`<div class="pcard"><h3>Your role</h3><b>${esc(slot.role)} · ${esc(prodName(slot.prod))}</b><span class="small">${slot.status==="Confirmed"?"Confirmed by the director":"Signed up, waiting for the director to confirm"}</span><span class="small muted">Report to wardrobe at crew call; your costume is pulled to your size.</span></div>`:""}
+      ${isCast&&!slot?`<div class="pcard"><h3>Open roles</h3>${S.slots.filter(x=>x.status==="Open").slice(0,3).map(x=>`<div class="row" style="justify-content:space-between"><span class="small">${esc(x.role)} · ${esc(prodName(x.prod))}</span><button class="btn" data-signup="${x.id}">Sign up</button></div>`).join("")||'<span class="small muted">All roles are filled.</span>'}</div>`:""}
+      ${dept?`<div class="pcard"><h3>Next production</h3><b>${esc(nextProd.name)} · ${nextProd.degree}</b><span class="small">${kitCodes(nextProd).filter(c=>item(c).dept===dept).length} ${dept.toLowerCase()} pieces to pull${gapsMine.length?` · <span class="gap">${gapsMine.length} gap</span>`:""}</span><button class="btn" data-ptab-go="kit" style="align-self:flex-start">Open pull list</button></div>`:""}
+      <div class="pcard"><h3>Today's schedule</h3><ul class="pull">${SCHEDULE[0].items.filter(i=>myRole.includes(i[2])||(isSM&&i[2]==="Candidates")).map(i=>`<li><span class="code">${i[0]}</span><span class="small">${esc(i[1])}</span><span></span></li>`).join("")}</ul></div>`;
+    const ck=$("#pCheck",body); if(ck) ck.onclick=()=>{m.checkedIn=true;award(m.id,POINTS.checkin,"Checked in at the Fall Reunion");toast("Checked in · +"+POINTS.checkin+" points");render()};
+    body.querySelectorAll("[data-signup]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.signup);sl.member=m.id;sl.status="Signed up";save();toast("Signed up for "+sl.role+" · the director will confirm");render()});
+    body.querySelectorAll("[data-ptab-go]").forEach(b=>b.onclick=()=>{pTab=b.dataset.ptabGo;render()});
+  } else if(pTab==="scan"){
+    body.innerHTML=`<div class="pcard"><h3>Scan a tag</h3><form class="scanfield" id="pScanF"><input id="pScanI" autocomplete="off" placeholder="Code on the tag" aria-label="Item code"><button class="btn primary">Find</button></form>
+      <div class="quick">${S.items.filter(i=>i.dept===dept).map(i=>`<button type="button" data-pscan="${i.code}">${i.code.replace("DEMO-","")}</button>`).join("")}</div></div><div id="pScanOut"></div>`;
+    const show=code=>{const i=item(String(code).trim().toUpperCase()),out=$("#pScanOut",body);
+      if(!i){out.innerHTML=`<div class="banner bad">No piece with that code.</div>`;return}
+      if(i.dept!==dept){out.innerHTML=`<div class="banner bad">${i.code} belongs to the ${i.dept} crew.</div>`;return}
+      out.innerHTML=`<div class="pcard ${i.high?"hv-card":""}" id="pScanCard"><span class="code muted">${i.code}</span><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small muted">${esc(i.location)} · size ${esc(i.size)}</span>${actionsFor(i,"s")}</div>`;
+      bindActions($("#pScanCard",body),i,()=>show(i.code))};
+    $("#pScanF",body).addEventListener("submit",e=>{e.preventDefault();show($("#pScanI",body).value)});
+    body.querySelectorAll("[data-pscan]").forEach(b=>b.onclick=()=>show(b.dataset.pscan));
+  } else if(pTab==="kit"){
+    if(isCast){
+      const slot=m&&S.slots.find(x=>x.member===m.id&&x.status!=="Open");
+      if(!slot){body.innerHTML=`<div class="pcard"><span class="small">No role yet. Sign up for an open role on the Today tab.</span></div>`}
+      else{const p=S.productions.find(x=>x.id===slot.prod), kit=(KITS[p.degree]||[]).find(r=>r.role===slot.role);
+        const pieces=(kit?kit.items:[]).map(item).filter(i=>i.dept==="Wardrobe").sort((a,b)=>LAYER_ORDER.indexOf(a.type)-LAYER_ORDER.indexOf(b.type));
+        body.innerHTML=`<div class="pcard"><h3>${esc(slot.role)} · ${p.degree}</h3><span class="small muted">The wardrobe crew dresses you in this order. Nothing to bring.</span><ol class="steps">${pieces.map(i=>`<li><span><b>${esc(i.name)}</b><br><span class="small">${esc(DRESS[i.type]||"")}</span></span></li>`).join("")}</ol></div>`}
+    } else if(isSM){
+      body.innerHTML=S.productions.map(p=>`<div class="pcard"><b>${esc(p.name)} · ${p.degree}</b><div class="row">${chip(p.stage==="Reset"?"Ready":p.stage==="Planning"?"Retired":"In use").replace(/>[^<]*<\/span>$/,">"+esc(p.stage)+"</span>")}${gaps(p).length?`<span class="gap">${gaps(p).length} kit gap</span>`:""}</div><span class="small muted">${S.slots.filter(x=>x.prod===p.id&&x.member).length}/${S.slots.filter(x=>x.prod===p.id).length} cast</span></div>`).join("");
+    } else {
+      const codes=kitCodes(nextProd).filter(c=>item(c).dept===dept);
+      body.innerHTML=`<div class="pcard"><h3>${esc(nextProd.name)} · ${nextProd.degree}</h3><ul class="pull">${codes.map(c=>{const i=item(c),bad=!["Ready","Pulled","In use"].includes(i.status);return `<li>${chip(i.status)}<span class="small"><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HV</span>':""}<br><span class="muted">${esc(i.location)}</span></span>${bad?'<span class="gap">GAP</span>':i.status==="Ready"&&!i.high?`<button class="btn" data-ppull="${c}">Pull</button>`:"<span></span>"}</li>`}).join("")||'<li class="small muted">Nothing for your crew in this production.</li>'}</ul></div>`;
+      body.querySelectorAll("[data-ppull]").forEach(b=>b.onclick=()=>{const i=item(b.dataset.ppull);act(i,"Pulled",`Pulled for ${nextProd.name} · ${nextProd.degree}`,pname(pp));toast(i.code+" pulled");render()});
+    }
+  } else if(pTab==="radio"){
+    intercomPanel(body);
+  } else if(pTab==="points"&&m){
+    const lvl=m.points>=60?"Gold":m.points>=30?"Silver":"Bronze";
+    body.innerHTML=`<div class="pcard"><h3>Your volunteer points</h3><span style="font-size:34px;font-weight:800;font-variant-numeric:tabular-nums">${m.points}</span><span class="small">${lvl} level · rank ${[...S.members].sort((a,b)=>b.points-a.points).findIndex(x=>x.id===m.id)+1} of ${S.members.length}</span></div>
+      <div class="pcard"><h3>History</h3><ul class="log">${m.log.slice(0,8).map(l=>`<li><time>${when(l.t)}</time> · <b>+${l.pts}</b> ${esc(l.text)}</li>`).join("")}</ul></div>`;
+  }
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;mode=b.dataset.mode;document.querySelectorAll("#modeSeg button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));if(mode==="crew"){RADIO.ch=persona().ch;RADIO.dm=null}radioPresence();closeDrawer();render();window.scrollTo(0,0)});
+
 /* ---------- boot ---------- */
 const h=(location.hash||"").replace("#","");
 if(VIEWS.some(v=>v[0]===h)) view=h;
 render();
+radioBoot();
 })();
 </script>
