@@ -8,10 +8,13 @@ const DRAFT = 'mcp__Gmail__create_draft'
 // The test's own hooks stand for the connectors: answer every tool the mod lets through.
 // approvedRows: an Approved task exists. t0Rows: an open T0 task exists (answers the tier query only).
 // opts.goLive: an Approved "Go live:" item exists. opts.ghl: the platform's answer text.
-const connectors = (on, approvedRows: boolean, t0Rows = false, opts: { goLive?: boolean; ghl?: string } = {}) => {
+// opts.sqlLimit: SQL reads fail with Notion's usage limit. opts.viewRows: rows the saved Approved view returns.
+const connectors = (on, approvedRows: boolean, t0Rows = false, opts: { goLive?: boolean; ghl?: string; sqlLimit?: boolean; viewRows?: object[] } = {}) => {
   const row = '[{"url":"https://www.notion.so/abc123def4567890abc123def4567890"}]'
   on('tool.call', { tool: NOTION_QUERY }, ($, e) => {
-    const d = (e as never as { data: { params: string[]; query: string } }).data
+    const d = (e as never as { data: { params: string[]; query: string; mode?: string } }).data
+    if (d.mode === 'view') return { result: [{ type: 'text', text: JSON.stringify({ results: opts.viewRows ?? [], has_more: false }) }] }
+    if (opts.sqlLimit) return { result: [{ type: 'text', text: 'Your workspace has reached the usage limit for Query Data Source.' }], isError: true }
     const hit = /Go live/.test(d.query) ? opts.goLive : d.params[0] === 'T0 Autonomous' ? t0Rows : approvedRows
     return { result: [{ type: 'text', text: hit ? row : '[]' }] }
   })
@@ -462,4 +465,21 @@ test('a DRAFT blog post in a client sub-account is still refused', async ($, on)
   await $.command.run({ command: 'client', args: 'cs-laser' })
   const r = await $.tool.call({ tool: GHL, operationId: 'create-blog-post', locationId: CS_LOC, reason: 'VT-868', params: { body: { title: 'x', status: 'DRAFT' } } } as never)
   expect(refused(r)).toBe(true)
+})
+
+test('when Notion SQL hits its usage limit, the Approved check reads the saved view instead', async ($, on) => {
+  connectors(on, false, false, { sqlLimit: true, viewRows: [{ Status: 'Approved', Client: 'vyntec Test Lab', Name: 'Review: API pilot' }] })
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-tag', locationId: LAB_LOC, reason: 'VT-867 tag', params: { name: 'pilot' } } as never)
+  expect(refused(r)).toBe(false)
+})
+
+test('the view fallback still refuses a write when no Approved task is for this client', async ($, on) => {
+  connectors(on, false, false, { sqlLimit: true, viewRows: [{ Status: 'Approved', Client: 'CS Laser', Name: 'Review: x' }] })
+  labFile(on)
+  await $.command.run({ command: 'client', args: 'test-lab' })
+  const r = await $.tool.call({ tool: GHL, operationId: 'create-tag', locationId: LAB_LOC, reason: 'VT-867 tag', params: { name: 'pilot' } } as never)
+  expect(refused(r)).toBe(true)
+  expect(reason(r)).toMatch(/Approved/)
 })

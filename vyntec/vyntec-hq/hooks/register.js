@@ -703,7 +703,24 @@ export function judge(e, active = null) {
 }
 
 // shortcut: any Approved task for the active client unlocks platform writes, upgrade when tasks carry the exact operation they approve
+// Saved view "Agent check: Approved" on vyntec Tasks (Status = Approved). View reads don't count against Notion's SQL usage limit.
+// shortcut: reads the first 100 Approved rows only, page through next_cursor if Approved ever holds more than 100 tasks
+export const APPROVED_VIEW = 'view://3f6369a7-789a-812d-863f-000cededf41a'
+export async function approvedRows($) {
+  const ran = await $.tool.call({ tool: await resolveTool($, NOTION_QUERY), data: { mode: 'view', view_url: APPROVED_VIEW, page_size: 100 } })
+  if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion view query failed')
+  const rows = JSON.parse(toText(ran)).results
+  if (!Array.isArray(rows)) throw new Error('Notion view answer has no results')
+  return rows.filter(r => r.Status === 'Approved')
+}
+
 export async function hasApprovedTask($, notionClient) {
+  try { return await hasApprovedTaskSql($, notionClient) } catch (err) {
+    try { return (await approvedRows($)).some(r => r.Client === notionClient) } catch { throw err }
+  }
+}
+
+async function hasApprovedTaskSql($, notionClient) {
   const ran = await $.tool.call({
     tool: await resolveTool($, NOTION_QUERY),
     data: {
@@ -776,12 +793,16 @@ async function hasBackup($, slug, task) {
 }
 
 async function hasApprovedGoLive($, notionClient) {
-  const ran = await $.tool.call({
-    tool: await resolveTool($, NOTION_QUERY),
-    data: { mode: 'sql', data_source_urls: [TASKS_DS], query: `SELECT url FROM "${TASKS_DS}" WHERE "Status" = ? AND "Client" = ? AND "Name" LIKE 'Go live:%' LIMIT 1`, params: ['Approved', notionClient] },
-  })
-  if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion query failed')
-  return /notion\.(so|com)\//.test(toText(ran))
+  try {
+    const ran = await $.tool.call({
+      tool: await resolveTool($, NOTION_QUERY),
+      data: { mode: 'sql', data_source_urls: [TASKS_DS], query: `SELECT url FROM "${TASKS_DS}" WHERE "Status" = ? AND "Client" = ? AND "Name" LIKE 'Go live:%' LIMIT 1`, params: ['Approved', notionClient] },
+    })
+    if (ran.deny !== undefined || ran.isError) throw new Error(ran.deny ?? ran.text ?? 'Notion query failed')
+    return /notion\.(so|com)\//.test(toText(ran))
+  } catch (err) {
+    try { return (await approvedRows($)).some(r => r.Client === notionClient && String(r.Name ?? '').startsWith('Go live:')) } catch { throw err }
+  }
 }
 
 // Asset register: a placed file must have a row in clients/<slug>/assets.md with its usage rights filled in.
