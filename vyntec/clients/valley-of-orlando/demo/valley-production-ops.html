@@ -327,6 +327,7 @@ const ICONS = {
  productions:'<path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v6h-4z"/>',
  guide:'<circle cx="12" cy="5" r="2.2"/><path d="M8 21l1.5-9h5L16 21M9 12l-3 4M15 12l3 4M9.5 8.5h5"/>',
  stage:'<path d="M3 20h18M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/>',
+ room:'<path d="M4 6h16M6 6v14M18 6v14"/><path d="M9 6l1 3M13 6l1 3"/><path d="M8.5 9h3l.5 6h-4zM12.5 9h3l.5 6h-4z"/>',
  labels:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>',
  reunion:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
  candidates:'<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2 8 12.7 4 8.8 9.5 8z"/>',
@@ -334,13 +335,17 @@ const ICONS = {
  points:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"/>',
  messages:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'
 };
-const VIEWS = [["dashboard","Dashboard"],["reunion","Reunion"],["candidates","Degree sign-ups"],["cast","Cast sign-ups"],["productions","Productions"],["inventory","Inventory"],["scan","Scan"],["guide","Dressing guide"],["stage","Stage layout"],["labels","QR labels"],["points","Volunteer points"],["messages","Communications"]];
+const VIEWS = [["dashboard","Dashboard"],["reunion","Reunion"],["candidates","Degree sign-ups"],["cast","Cast sign-ups"],["productions","Productions"],["inventory","Inventory"],["scan","Scan"],["guide","Dressing guide"],["room","Wardrobe room"],["stage","Stage layout"],["labels","QR labels"],["points","Volunteer points"],["messages","Communications"]];
+const HIDE={Wardrobe:["stage"],Props:["room","guide"]};
+const navViews=()=>VIEWS.filter(v=>!(HIDE[crew]||[]).includes(v[0]));
 function renderNav(){
-  $("#navlist").innerHTML = VIEWS.map(([k,l])=>`<li><button type="button" data-view="${k}" ${k===view?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span class="t">${l}</span></button></li>`).join("");
+  if(!navViews().some(v=>v[0]===view)) view=crew==="Wardrobe"?"room":"stage";
+  $("#navlist").innerHTML = navViews().map(([k,l])=>`<li><button type="button" data-view="${k}" ${k===view?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span class="t">${l}</span></button></li>`).join("");
 }
 document.addEventListener("click",e=>{
   const v=e.target.closest("[data-view]"); if(v){go(v.dataset.view);return}
   const c=e.target.closest("[data-crew]"); if(c){crew=c.dataset.crew;document.querySelectorAll("#crewSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b===c)));render();return}
+  const rm=e.target.closest("[data-room]"); if(rm){roomFocus=rm.dataset.room;closeDrawer();go("room");return}
   const o=e.target.closest("[data-open]"); if(o){openItem(o.dataset.open);return}
 });
 function go(v){view=v;try{history.replaceState(null,"","#"+v)}catch(e){}render();window.scrollTo(0,0)}
@@ -351,7 +356,7 @@ function render(){
   renderNav();
   $("#viewTitle").textContent = VIEWS.find(v=>v[0]===view)[1];
   stopLoops();
-  const f = {dashboard,inventory,scan,productions,guide,stage,labels,reunion,candidates,cast,points,messages}[view];
+  const f = {dashboard,inventory,scan,productions,guide,stage,room,labels,reunion,candidates,cast,points,messages}[view];
   $("#view").innerHTML = ""; f($("#view"));
 }
 
@@ -431,6 +436,7 @@ function openItem(code){
     <header><div style="flex:1;min-width:0"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2><div class="row" style="margin-top:6px">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</div></div><button class="btn" id="closeD" aria-label="Close">Close</button></header>
     <div class="body">
       <dl class="kv"><dt>Crew</dt><dd>${i.dept}</dd><dt>Type</dt><dd>${esc(i.type)}</dd><dt>Degree</dt><dd>${i.degree}</dd><dt>Size</dt><dd>${esc(i.size)}</dd><dt>Location</dt><dd>${esc(i.location)}</dd><dt>Condition</dt><dd>${esc(i.condition)}</dd>${i.high?`<dt>Insured value</dt><dd>${esc(i.value)}</dd><dt>Sign-out</dt><dd>${LEADS.Wardrobe} only</dd>`:""}</dl>
+      ${i.dept==="Wardrobe"?`<button class="btn" data-room="${i.code}" style="align-self:flex-start">Show in wardrobe room</button>`:""}
       <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Actions</h3>${actionsFor(i,"d")}</div>
       <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">History</h3><ul class="log">${i.log.map(l=>`<li><time>${when(l.t)}</time> · ${esc(l.text)} <span class="muted">(${esc(l.by)})</span></li>`).join("")}</ul></div>
     </div></aside>`;
@@ -566,7 +572,7 @@ function guide(el){
      <div class="panel"><h2>${gDeg} · ${esc(roles[gRole].role)}: dressing order</h2>
        <label class="small muted" for="gStep">Dressed through step <b id="gStepN">${gStep}</b> of ${pieces.length}</label>
        <input type="range" id="gStep" min="0" max="${pieces.length}" value="${gStep}">
-       <ol class="steps" id="gSteps">${pieces.map((i,k)=>`<li data-step="${k+1}" class="${k+1===gStep?"on":k+1>gStep?"future":""}"><span><b>${esc(i.name)}</b> <button class="btn" style="padding:0 6px;font-size:12px" data-open="${i.code}">${i.code}</button> ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small">${esc(DRESS[i.type]||"Dress as shown.")}</span><br><span class="small muted">From ${esc(i.location)} · size ${esc(i.size)} · ${chip(i.status)}</span></span></li>`).join("")}</ol>
+       <ol class="steps" id="gSteps">${pieces.map((i,k)=>`<li data-step="${k+1}" class="${k+1===gStep?"on":k+1>gStep?"future":""}"><span><b>${esc(i.name)}</b> <button class="btn" style="padding:0 6px;font-size:12px" data-open="${i.code}">${i.code}</button> ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small">${esc(DRESS[i.type]||"Dress as shown.")}</span><br><span class="small muted">From ${esc(i.location)} · size ${esc(i.size)} · ${chip(i.status)}</span> <button class="btn" style="padding:0 6px;font-size:12px" data-room="${i.code}">Show in room</button></span></li>`).join("")}</ol>
        <p class="note" style="margin-top:12px">In the live system each role is a lesson in the Valley's private Wardrobe & Props Guide course, with front, back and side photos of the real costume and a 360° phone video.</p>
      </div></div>`;
   $("#gDeg").onchange=e=>{gDeg=e.target.value;gRole=0;gStep=99;render()};
@@ -686,6 +692,97 @@ function stage(el){
   let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)sel.rotation.y=(performance.now()-t0)/900;r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
   const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
   loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+}
+
+/* ---------- wardrobe room ---------- */
+let roomFocus=null;
+const ROOM={ // storage spots in the wardrobe room (sample layout; the Valley's wardrobe lead maps the real room)
+ "Wardrobe Rack A1":{kind:"rack",x:-4.2,z:-3.3,label:"Rack A1 · robes"},
+ "Wardrobe Rack A2":{kind:"rack",x:-1.4,z:-3.3,label:"Rack A2 · tunics"},
+ "Wardrobe Rack B1":{kind:"rack",x:1.4,z:-3.3,label:"Rack B1 · capes"},
+ "Wardrobe Rack B2":{kind:"rack",x:4.2,z:-3.3,label:"Rack B2 · coats"},
+ "Wardrobe Drawer C1":{kind:"drawer",x:5.6,z:-.4,row:0,label:"Drawers C1–C4"},
+ "Wardrobe Drawer C3":{kind:"drawer",x:5.6,z:-.4,row:2},
+ "Wardrobe Shelf D2":{kind:"shelf",x:-5.6,z:-.2,row:1,label:"Shelves D1–D3 · headpieces"},
+ "Wardrobe Bin E1":{kind:"bin",x:-3.7,z:2.8,label:"E1 · footwear"},
+ "Wardrobe Bin E2":{kind:"bin",x:-1.5,z:2.8,label:"E2 · gloves"},
+ "Locked mask cabinet":{kind:"cabinet",x:4.4,z:2.9,label:"Locked mask cabinet"}
+};
+function room(el){
+  const its=S.items.filter(i=>i.dept==="Wardrobe");
+  const byLoc={}; its.forEach(i=>(byLoc[i.location]=byLoc[i.location]||[]).push(i));
+  const out=its.filter(i=>i.status==="Pulled"||i.status==="In use").length;
+  el.innerHTML=`<div class="filters"><div class="seg" role="group" aria-label="Camera"><button type="button" data-rcam="3d" aria-pressed="${!sTop}">3D</button><button type="button" data-rcam="top" aria-pressed="${sTop}">Floor plan</button></div>
+    <span class="small muted">Sample room layout. The wardrobe lead maps the real racks, drawers and shelves once, then every piece shows where it lives.</span></div>
+  <div class="grid g32">
+    <div class="stagewrap" id="rWrap"><div class="loading3d" id="rLoad">Loading wardrobe room…</div></div>
+    <div class="panel"><div id="rCard"></div><h2>Where everything lives</h2>
+      <p class="small muted" style="margin-top:0">${its.length} sample pieces (about 300 in the real room) · ${out} out right now, shown as an empty hanger or slot.</p>
+      ${Object.entries(byLoc).map(([loc,list])=>`<h3 style="margin-top:12px">${esc(loc)}</h3><ul class="pull" data-loc>${list.map(i=>`<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-rpick="${i.code}">${i.code}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${i.degree} · size ${esc(i.size)}</span></span><span></span></li>`).join("")}</ul>`).join("")}
+    </div></div>`;
+  el.querySelectorAll("[data-rcam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.rcam==="top";render()});
+  const card=code=>{const i=item(code);$("#rCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px;margin-bottom:14px"><div class="row" style="justify-content:space-between"><span class="code muted">${i.code}</span><button class="btn" id="rCardClose" style="padding:2px 8px;font-size:12.5px" aria-label="Close piece details">Close</button></div><b>${esc(i.name)}</b><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}</div><span class="small">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span><span class="small muted">${i.status==="Pulled"||i.status==="In use"?"Out of the room now. Its spot is held empty for the return.":esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`;$("#rCardClose").onclick=()=>{$("#rCard").innerHTML="";hl(null)}};
+  let hl=()=>{};
+  el.querySelectorAll("[data-rpick]").forEach(b=>b.onclick=()=>{card(b.dataset.rpick);hl(b.dataset.rpick)});
+  if(!have3d()){$("#rLoad").textContent="The 3D room needs WebGL and couldn't load here. The location list still works.";return}
+  const wrap=$("#rWrap"); $("#rLoad").remove();
+  const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
+  const cam=new THREE.PerspectiveCamera(40,1.6,.1,200);
+  if(sTop) cam.position.set(0,16,.01); else cam.position.set(0,7.6,11.2);
+  const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.8,-.3); ctl.maxPolarAngle=sTop?.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=24; ctl.enableRotate=!sTop; ctl.update();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x3a3d48,.95)); const dl=new THREE.DirectionalLight(0xffffff,.7); dl.position.set(3,10,6); scene.add(dl);
+  const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
+  const add=(geo,m,x,y,z,ry=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.y=ry;scene.add(o);return o};
+  const box=(w,h,d,m,x,y,z)=>add(new THREE.BoxGeometry(w,h,d),m,x,y,z);
+  // room shell
+  box(13,.1,9,M(0x9a8f80),0,-.05,0); box(13,3.2,.15,M(0xd9d4cc),0,1.6,-4.5); box(.15,3.2,9,M(0xcfc9c0),-6.5,1.6,0); box(.15,3.2,9,M(0xcfc9c0),6.5,1.6,0);
+  const metal=M(0x7d838f,{metalness:.5,roughness:.4}), wood=M(0x8a6a48), dark=M(0x3a3f4a);
+  const col={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
+  const sign=(text,x,y,z,w=2.4)=>{const cv=document.createElement("canvas");cv.width=512;cv.height=96;const c=cv.getContext("2d");c.fillStyle="rgba(23,26,33,.88)";c.fillRect(0,0,512,96);c.fillStyle="#fff";c.font="600 40px Public Sans, Arial, sans-serif";c.textAlign="center";c.textBaseline="middle";c.fillText(text,256,50);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false}));sp.scale.set(w,w*.1875,1);sp.position.set(x,y,z);scene.add(sp)};
+  const meshes={}, hits=[];
+  const tagOf=i=>{const c=hexOf(STATUS_VAR[i.status]);return M(c,{emissive:c,emissiveIntensity:.35})};
+  const reg=(i,obj,hx,hy,hz,hr=.35,hh=1.4)=>{obj.userData.code=i.code;meshes[i.code]=obj;const h=add(new THREE.CylinderGeometry(hr,hr,hh,12),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}),hx,hy,hz);h.userData.code=i.code;hits.push(h)};
+  const outMat=M(0x9aa1b0,{transparent:true,opacity:.28});
+  Object.entries(ROOM).forEach(([loc,R])=>{
+    const list=byLoc[loc]||[];
+    if(R.kind==="rack"){
+      [-1.15,1.15].forEach(dx=>box(.06,2.2,.06,metal,R.x+dx,1.1,R.z)); box(2.4,.05,.05,metal,R.x,2.2,R.z); [-1.15,1.15].forEach(dx=>box(.06,.06,.6,metal,R.x+dx,.05,R.z));
+      sign(R.label,R.x,2.65,R.z);
+      list.forEach((i,k)=>{const x=R.x-.8+k*.55, isOut=i.status==="Pulled"||i.status==="In use";
+        add(new THREE.TorusGeometry(.06,.012,6,12,Math.PI),metal,x,2.16,R.z); box(.42,.03,.03,metal,x,2.08,R.z);
+        const len=i.type==="Tunic"?1.0:1.6, g=add(new THREE.BoxGeometry(.44,len,.16),isOut?outMat:M(col[i.type]||0x777777),x,2.05-len/2,R.z);
+        box(.14,.1,.02,tagOf(i),x,2.0-len*0.12,R.z+.09);
+        reg(i,g,x,1.3,R.z,.28,1.8)});
+    }else if(R.kind==="drawer"){
+      if(R.label){box(.9,1.6,1.4,wood,R.x,.8,R.z);for(let k=0;k<4;k++)box(.04,.32,1.25,M(0xa58560),R.x-.46,1.4-k*.38,R.z);sign(R.label,R.x-.5,2.0,R.z)}
+      list.forEach((i,k)=>{const y=1.4-R.row*.38, isOut=i.status==="Pulled"||i.status==="In use";const f=box(.05,.3,1.2,isOut?outMat:M(col[i.type]||0x777777,{emissive:col[i.type]||0,emissiveIntensity:.15}),R.x-.5,y,R.z-.2+k*.4);box(.03,.08,.2,tagOf(i),R.x-.53,y,R.z+.45);reg(i,f,R.x-.6,y,R.z,.4,.5)});
+    }else if(R.kind==="shelf"){
+      if(R.label){[-.7,.7].forEach(dz=>box(.6,2.1,.05,wood,R.x,1.05,R.z+dz));for(let k=0;k<3;k++)box(.6,.05,1.45,wood,R.x,.5+k*.65,R.z);sign(R.label,R.x+.4,2.45,R.z)}
+      list.forEach((i,k)=>{const y=.5+R.row*.65, isOut=i.status==="Pulled"||i.status==="In use";const h=add(new THREE.CylinderGeometry(.17,.2,.24,20),isOut?outMat:M(col[i.type]||0x777777),R.x+.05,y+.15,R.z-.35+k*.45);box(.02,.08,.14,tagOf(i),R.x+.31,y+.08,R.z-.35+k*.45);reg(i,h,R.x+.1,y+.2,R.z-.35+k*.45,.3,.5)});
+    }else if(R.kind==="bin"){
+      box(1.1,.5,.8,M(0x4a6b8a),R.x,.25,R.z); sign(R.label,R.x,1.05,R.z,1.55);
+      list.forEach((i,k)=>{const isOut=i.status==="Pulled"||i.status==="In use";const o=box(.35,.14,.25,isOut?outMat:M(col[i.type]||0x777777),R.x-.2+k*.4,.56,R.z);box(.1,.04,.02,tagOf(i),R.x-.2+k*.4,.56,R.z+.14);reg(i,o,R.x,.6,R.z,.45,.6)});
+    }else if(R.kind==="cabinet"){
+      box(1.6,1.9,.7,dark,R.x,.95,R.z); box(1.5,1.7,.03,M(0xbfd6e6,{transparent:true,opacity:.25,metalness:.3}),R.x,1.0,R.z+.37);
+      box(.08,.18,.06,M(0xc9a227,{metalness:.8,roughness:.3}),R.x+.6,1.0,R.z+.4); sign("LOCKED · masks",R.x,2.3,R.z);
+      list.forEach((i,k)=>{const x=R.x-.4+k*.8, isOut=i.status==="Pulled"||i.status==="In use";box(.08,.5,.08,M(0x222222),x,.75,R.z);const m=add(new THREE.SphereGeometry(.2,20,14,-Math.PI*.4,Math.PI*.8),isOut?outMat:M(col.Mask,{metalness:.5,roughness:.35}),x,1.15,R.z+.05);box(.1,.05,.02,tagOf(i),x,.9,R.z+.32);reg(i,m,x,1.1,R.z,.3,.7)});
+    }
+  });
+  const selRing=add(new THREE.TorusGeometry(.4,.04,8,40),M(0xe0c48a,{emissive:0xe0c48a,emissiveIntensity:.8}),0,0,0); selRing.rotation.x=Math.PI/2; selRing.visible=false;
+  let sel=null;
+  hl=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;selRing.visible=!!sel;if(sel){sel.scale.setScalar(1.12);selRing.position.set(sel.position.x,.03,sel.position.z)}
+    document.querySelectorAll("#view [data-rpick]").forEach(b=>b.closest("li").style.background=b.dataset.rpick===code?"var(--accent-soft)":"")};
+  const ray=new THREE.Raycaster(), v=new THREE.Vector2();
+  const pick=e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const h=ray.intersectObjects(hits.concat(Object.values(meshes)),true)[0];if(!h)return null;let o=h.object;while(o&&!o.userData.code)o=o.parent;return o?o.userData.code:null};
+  let down=null;
+  r.domElement.addEventListener("pointerdown",e=>{down={x:e.clientX,y:e.clientY}},true);
+  r.domElement.addEventListener("pointerup",e=>{if(!down)return;const mv=Math.hypot(e.clientX-down.x,e.clientY-down.y);down=null;if(mv>6)return;const c=pick(e);if(c){card(c);hl(c)}},true);
+  r.domElement.addEventListener("pointermove",e=>{if(e.buttons)return;r.domElement.style.cursor=pick(e)?"pointer":"grab"});
+  let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)selRing.scale.setScalar(1+.08*Math.sin((performance.now()-t0)/250));r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
+  const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
+  loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  if(roomFocus&&meshes[roomFocus]){card(roomFocus);hl(roomFocus)} roomFocus=null;
 }
 
 /* ---------- labels ---------- */
