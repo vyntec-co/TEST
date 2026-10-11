@@ -1,0 +1,661 @@
+<title>Valley Production Ops</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: CRM app shell — dark nav rail + work area; every view is a working screen over one shared demo dataset */
+:root{
+  --bg:#f3f4f7; --surface:#ffffff; --sunk:#eceef3; --fg:#171a21; --muted:#5b6170; --line:#dde0e7;
+  --nav:#161a22; --nav-fg:#c9cdd6; --nav-active:#ffffff;
+  --accent:#7a2445; --accent-fg:#ffffff; --accent-soft:#f4e6ec;
+  --ok:#1f7a4a; --ok-soft:#e2f2e9; --warn:#9a6200; --warn-soft:#fbefd8; --info:#1f5fae; --info-soft:#e3edf9;
+  --clean:#6a46a8; --clean-soft:#eee7f8; --bad:#b3261e; --bad-soft:#fbe5e3; --off:#6d7280; --off-soft:#eceef2;
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1116; --surface:#171a21; --sunk:#1d2129; --fg:#e6e8ee; --muted:#9aa1b0; --line:#2a2f3a;
+  --nav:#0a0c10; --nav-fg:#a7adba; --nav-active:#ffffff;
+  --accent:#d0638b; --accent-fg:#14070c; --accent-soft:#3a1b27;
+  --ok:#5fcf8f; --ok-soft:#173326; --warn:#e8b45a; --warn-soft:#3a2c12; --info:#7fb2f0; --info-soft:#16283f;
+  --clean:#b49cf0; --clean-soft:#2a2140; --bad:#f08a80; --bad-soft:#3d1a18; --off:#9aa1b0; --off-soft:#232730; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1116; --surface:#171a21; --sunk:#1d2129; --fg:#e6e8ee; --muted:#9aa1b0; --line:#2a2f3a;
+  --nav:#0a0c10; --nav-fg:#a7adba; --nav-active:#ffffff;
+  --accent:#d0638b; --accent-fg:#14070c; --accent-soft:#3a1b27;
+  --ok:#5fcf8f; --ok-soft:#173326; --warn:#e8b45a; --warn-soft:#3a2c12; --info:#7fb2f0; --info-soft:#16283f;
+  --clean:#b49cf0; --clean-soft:#2a2140; --bad:#f08a80; --bad-soft:#3d1a18; --off:#9aa1b0; --off-soft:#232730; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.code{font-family:var(--mono);font-size:.86em;letter-spacing:.01em}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+/* nav */
+.nav{background:var(--nav);color:var(--nav-fg);display:flex;flex-direction:column;gap:18px;padding:18px 14px;position:sticky;top:0;height:100vh}
+.brand{display:flex;flex-direction:column;gap:2px;padding:0 6px}
+.brand b{color:var(--nav-active);font-weight:800;letter-spacing:.02em;font-size:18px}
+.brand span{font-size:12px;line-height:1.35}
+.nav ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.nav button{width:100%;text-align:left;background:none;border:0;color:inherit;padding:9px 10px;border-radius:6px;display:flex;gap:10px;align-items:center;font-weight:500}
+.nav button:hover{background:rgba(255,255,255,.06)}
+.nav button[aria-current="page"]{background:rgba(255,255,255,.1);color:var(--nav-active)}
+.nav svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav .foot{margin-top:auto;font-size:12px;line-height:1.45;padding:0 6px;display:flex;flex-direction:column;gap:8px}
+.nav .foot button{width:auto;padding:6px 10px;border:1px solid rgba(255,255,255,.18);font-size:12.5px}
+/* main */
+.main{min-width:0;display:flex;flex-direction:column}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding-block:12px;padding-inline:24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h1{font-size:19px;margin:0;font-weight:700;text-wrap:balance}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.pill.demo{background:var(--accent-soft);color:var(--accent)}
+.spacer{flex:1}
+.seg{display:inline-flex;background:var(--sunk);border-radius:8px;padding:3px;gap:2px}
+.seg button{border:0;background:none;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.view{padding-inline:24px;padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.panel h2{font-size:15px;margin:0 0 10px;font-weight:700}
+.panel h3{font-size:13px;margin:0 0 8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.g32{grid-template-columns:minmax(0,3fr) minmax(0,2fr)}
+.tile{display:flex;flex-direction:column;gap:2px}
+.tile .n{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{color:var(--muted);font-size:13px}
+.tile.alert .n{color:var(--bad)}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.note{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:6px;padding:8px 10px}
+/* status chips */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.st::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-Ready{background:var(--ok-soft);color:var(--ok)}
+.st-Pulled{background:var(--warn-soft);color:var(--warn)}
+.st-In-use{background:var(--info-soft);color:var(--info)}
+.st-Cleaning{background:var(--clean-soft);color:var(--clean)}
+.st-Repair{background:var(--bad-soft);color:var(--bad)}
+.st-Retired{background:var(--off-soft);color:var(--off)}
+.hv{display:inline-flex;font-size:11px;font-weight:800;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:var(--accent);color:var(--accent-fg)}
+.flag{display:inline-flex;font-size:11px;font-weight:800;padding:2px 6px;border-radius:4px;background:var(--bad);color:#fff}
+/* bars */
+.bar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--sunk)}
+.bar i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend b{width:9px;height:9px;border-radius:2px;display:inline-block}
+/* tables */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th{position:sticky;top:0;background:var(--sunk);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;padding:9px 10px;white-space:nowrap}
+td{padding:9px 10px;border-top:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--sunk)}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type="search"],input[type="text"],select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+input[type="search"]{flex:1 1 220px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 12px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,12,16,.45);z-index:20}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:var(--surface);z-index:21;border-left:1px solid var(--line);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+.drawer header{padding:16px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.drawer header h2{margin:0;font-size:18px}
+.drawer .body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:0;font-size:14px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.log li{border-left:2px solid var(--line);padding-left:10px}
+.log time{color:var(--muted);font-variant-numeric:tabular-nums}
+/* scan */
+.scanbox{display:flex;flex-direction:column;gap:12px}
+.scanfield{display:flex;gap:8px}
+.scanfield input{flex:1;font-family:var(--mono);font-size:18px;padding:12px 14px;letter-spacing:.04em}
+.itemcard{border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--surface)}
+.itemcard.hv-card{border-color:var(--accent);box-shadow:inset 4px 0 0 var(--accent)}
+.itemcard h2{margin:0;font-size:20px}
+.quick{display:flex;flex-wrap:wrap;gap:6px}
+.quick button{font-family:var(--mono);font-size:12.5px;border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:4px 8px}
+fieldset{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin:0;display:flex;flex-wrap:wrap;gap:8px 16px}
+legend{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:0 4px}
+label.opt{display:inline-flex;gap:6px;align-items:center;font-size:14px}
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(180px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.col{background:var(--sunk);border-radius:var(--r);padding:10px;display:flex;flex-direction:column;gap:8px;min-height:120px}
+.col h4{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:flex;justify-content:space-between}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.card b{font-size:14px}
+.card .row{gap:4px}
+.card .btn{padding:3px 8px;font-size:12.5px}
+.pull li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
+.pull{list-style:none;margin:0;padding:0}
+.pull li:first-child{border-top:0}
+.gap{color:var(--bad);font-weight:700;font-size:12px}
+/* guide + stage */
+.stagewrap{position:relative;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--sunk);aspect-ratio:16/10;max-width:100%}
+.stagewrap canvas{display:block;width:100%;height:100%}
+.stage-card{position:absolute;right:10px;top:10px;max-width:min(240px,calc(100% - 20px))}
+.stage-card .itemcard{box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.loading3d{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px;text-align:center;padding:16px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:8px;border-radius:6px;border:1px solid transparent;counter-increment:s;cursor:pointer}
+.steps li::before{content:counter(s);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+.steps li.on{background:var(--accent-soft);border-color:var(--accent)}
+.steps li.on::before{color:var(--accent)}
+.steps li.future{opacity:.55}
+input[type="range"]{width:100%;accent-color:var(--accent)}
+/* labels */
+.labels{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.label{background:#fff;color:#111;border:1px dashed #b9bdc7;border-radius:6px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;text-align:center}
+.label .qr{width:104px;height:104px;display:grid;place-items:center}
+.label .qr img,.label .qr canvas{width:104px!important;height:104px!important}
+.label b{font-family:var(--mono);font-size:12px}
+.label span{font-size:11.5px;line-height:1.3}
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 14px;border-radius:8px;font-size:14px;font-weight:600;z-index:40;max-width:calc(100% - 32px)}
+.banner{border-radius:var(--r);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.banner.bad{background:var(--bad-soft);color:var(--bad)}
+.banner.ok{background:var(--ok-soft);color:var(--ok)}
+/* responsive */
+@media (max-width:980px){.g4{grid-template-columns:repeat(2,minmax(0,1fr))}.g32{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .nav{position:sticky;top:0;height:auto;flex-direction:row;align-items:center;gap:10px;padding:10px 16px;overflow-x:auto;z-index:10}
+  .brand span,.nav .foot{display:none}
+  .nav ul{flex-direction:row;gap:2px}
+  .nav button{padding:7px 9px;white-space:nowrap;font-size:13px}
+  .nav button .t{display:none}
+  .nav button[aria-current="page"] .t{display:inline}
+  .top{position:static;padding-inline:16px}
+  .view{padding-inline:16px}
+  .g2{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:420px){.g4{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.tile .n{font-size:24px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="app">
+  <nav class="nav" aria-label="Main">
+    <div class="brand"><b>vyntec</b><span>Production Operations<br>prepared for the Valley of Orlando</span></div>
+    <ul id="navlist"></ul>
+    <div class="foot">
+      <span>Demo by vyntec with sample data. Not an official Valley of Orlando page. In the live system this runs inside the Valley's own link.vyntec.co account.</span>
+      <button type="button" id="resetBtn">Reset demo data</button>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="top">
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="pill demo">DEMO · sample data</span>
+      <span class="spacer"></span>
+      <span class="small muted">Viewing as</span>
+      <div class="seg" role="group" aria-label="Crew view" id="crewSeg">
+        <button type="button" data-crew="All" aria-pressed="true">Officers</button>
+        <button type="button" data-crew="Wardrobe" aria-pressed="false">Wardrobe crew</button>
+        <button type="button" data-crew="Props" aria-pressed="false">Props crew</button>
+      </div>
+    </div>
+    <main id="view" class="view"></main>
+  </div>
+</div>
+<div id="drawerHost"></div>
+<div id="toastHost"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+"use strict";
+const STATUSES = ["Ready","Pulled","In use","Cleaning","Repair","Retired"];
+const STATUS_VAR = {"Ready":"--ok","Pulled":"--warn","In use":"--info","Cleaning":"--clean","Repair":"--bad","Retired":"--off"};
+const STAGES = ["Planning","Pull","Dressed","Returned","Reset"];
+const LEADS = {Wardrobe:"Wardrobe lead (sample)", Props:"Props lead (sample)"};
+
+const SEED_ITEMS = [
+ ["DEMO-WR-001","Black robe","Wardrobe","Robe","4°","L","Wardrobe Rack A1","Ready","Good"],
+ ["DEMO-WR-002","Black robe","Wardrobe","Robe","4°","XL","Wardrobe Rack A1","Ready","Good"],
+ ["DEMO-WR-003","White tunic","Wardrobe","Tunic","14°","M","Wardrobe Rack A2","Cleaning","Needs cleaning"],
+ ["DEMO-WR-004","Red cape","Wardrobe","Cape","18°","One size","Wardrobe Rack B1","Ready","Good"],
+ ["DEMO-WR-005","Gold-trim collar","Wardrobe","Collar","18°","One size","Wardrobe Drawer C3","Ready","Good"],
+ ["DEMO-WR-006","Headdress","Wardrobe","Headpiece","32°","M","Wardrobe Shelf D2","Repair","Torn lining"],
+ ["DEMO-WR-007","Blue sash","Wardrobe","Sash","14°","One size","Wardrobe Drawer C1","Ready","Good"],
+ ["DEMO-WR-008","Long coat","Wardrobe","Coat","32°","L","Wardrobe Rack B2","Ready","Good"],
+ ["DEMO-WR-009","Sandals","Wardrobe","Footwear","4°","11","Wardrobe Bin E1","Ready","Worn"],
+ ["DEMO-WR-010","White gloves","Wardrobe","Gloves","18°","L","Wardrobe Bin E2","Ready","Good"],
+ ["DEMO-MK-001","Ceremonial mask 1","Wardrobe","Mask","32°","One size","Locked mask cabinet","Ready","Good",true,"[[insured value — Valley to confirm]]"],
+ ["DEMO-MK-002","Ceremonial mask 2","Wardrobe","Mask","32°","One size","Locked mask cabinet","Ready","Good",true,"[[insured value — Valley to confirm]]"],
+ ["DEMO-PR-001","Stage sword (blunt)","Props","Stage weapon","14°","-","Props Cage 1","Ready","Good"],
+ ["DEMO-PR-002","Stage sword (blunt)","Props","Stage weapon","14°","-","Props Cage 1","Ready","Good"],
+ ["DEMO-PR-003","Staff","Props","Hand prop","4°","-","Props Rack 2","Ready","Good"],
+ ["DEMO-PR-004","Lantern","Props","Hand prop","18°","-","Props Shelf 3","Repair","Cracked glass"],
+ ["DEMO-PR-005","Scroll","Props","Hand prop","32°","-","Props Shelf 3","Ready","Good"],
+ ["DEMO-PR-006","Chalice","Props","Hand prop","18°","-","Props Cabinet 4","Ready","Good"],
+ ["DEMO-PR-007","Throne chair","Props","Set piece","32°","-","Stage Storage Bay","Ready","Good"],
+ ["DEMO-PR-008","Altar cloth","Props","Set dressing","4°","-","Props Cabinet 4","Ready","Good"],
+ ["DEMO-PR-009","Banner","Props","Set dressing","14°","-","Props Rack 2","Ready","Faded"],
+ ["DEMO-PR-010","Candle stand","Props","Set piece","18°","-","Stage Storage Bay","Ready","Good"]
+];
+// Role kits per degree (sample roles; real roles come from the Valley's directors)
+const KITS = {
+ "4°":[{role:"Lead role",items:["DEMO-WR-001","DEMO-WR-009","DEMO-PR-003"]},{role:"Supporting role",items:["DEMO-WR-002","DEMO-PR-008"]}],
+ "14°":[{role:"Lead role",items:["DEMO-WR-003","DEMO-WR-007","DEMO-PR-001"]},{role:"Guard",items:["DEMO-PR-002","DEMO-PR-009"]}],
+ "18°":[{role:"Lead role",items:["DEMO-WR-004","DEMO-WR-005","DEMO-WR-010","DEMO-PR-006"]},{role:"Attendant",items:["DEMO-PR-004","DEMO-PR-010"]}],
+ "32°":[{role:"Lead role",items:["DEMO-WR-008","DEMO-WR-006","DEMO-MK-001","DEMO-PR-007"]},{role:"Masked figure",items:["DEMO-MK-002","DEMO-PR-005"]}]
+};
+const DRESS = {Robe:"Step into the robe and fasten it at the neck; hem should clear the floor by about an inch.",Tunic:"Pull the tunic over the head; seams to the sides, hem even all round.",Coat:"Put the coat on over the base layer; fasten every closure from the top.",Cape:"Drape the cape across both shoulders; fasten at the front so the fall is even at the back.",Sash:"Lay the sash over the left shoulder, cross to the right hip and tie or pin at the hip.",Collar:"Place the collar over the shoulders so the point sits centre front.",Gloves:"Gloves go on last before any hand prop is handed over.",Footwear:"Footwear first if the robe is long, so the hem can be checked standing.",Headpiece:"Seat the headpiece level; check the fit with the wardrobe crew before entrance.",Mask:"High-value: the wardrobe lead hands the mask over and fits it; the cast member never takes it from the cabinet."};
+const LAYER_ORDER = ["Footwear","Robe","Tunic","Coat","Cape","Sash","Collar","Gloves","Headpiece","Mask"];
+const STAGE_LAYOUT = {
+ "4°":[[{c:"DEMO-PR-008",x:0,z:-2.2},{c:"DEMO-PR-003",x:-2.5,z:0.5}],[{c:"DEMO-PR-008",x:0,z:-2.2},{c:"DEMO-PR-003",x:1.8,z:-0.8}]],
+ "14°":[[{c:"DEMO-PR-009",x:-3.4,z:-2.6},{c:"DEMO-PR-001",x:-1.2,z:0.4},{c:"DEMO-PR-002",x:1.2,z:0.4}],[{c:"DEMO-PR-009",x:3.4,z:-2.6},{c:"DEMO-PR-001",x:-0.6,z:-1.2},{c:"DEMO-PR-002",x:0.6,z:-1.2}]],
+ "18°":[[{c:"DEMO-PR-010",x:-1.6,z:-2.0},{c:"DEMO-PR-006",x:0,z:-1.4},{c:"DEMO-PR-004",x:2.6,z:0.8}],[{c:"DEMO-PR-010",x:1.6,z:-2.0},{c:"DEMO-PR-006",x:-0.8,z:0.2},{c:"DEMO-PR-004",x:-2.8,z:-0.6}]],
+ "32°":[[{c:"DEMO-PR-007",x:0,z:-2.6},{c:"DEMO-PR-005",x:2.2,z:-0.4}],[{c:"DEMO-PR-007",x:-2.4,z:-2.2},{c:"DEMO-PR-005",x:0.4,z:0.6}]]
+};
+function seed(){
+  const now = Date.now();
+  return {
+    items: SEED_ITEMS.map(a=>({code:a[0],name:a[1],dept:a[2],type:a[3],degree:a[4],size:a[5],location:a[6],status:a[7],condition:a[8],high:!!a[9],value:a[10]||"",flag:false,log:[{t:now-864e5*3,by:"Import (demo)",text:"Tagged and added to inventory"}]})),
+    productions:[
+      {id:"P1",name:"Fall Reunion, Day 1",date:"Sat, Nov 7 (sample)",degree:"4°",stage:"Pull"},
+      {id:"P2",name:"Fall Reunion, Day 1",date:"Sat, Nov 7 (sample)",degree:"14°",stage:"Planning"},
+      {id:"P3",name:"Fall Reunion, Day 2",date:"Sun, Nov 8 (sample)",degree:"18°",stage:"Planning"},
+      {id:"P4",name:"Fall Reunion, Day 2",date:"Sun, Nov 8 (sample)",degree:"32°",stage:"Planning"}
+    ],
+    activity:[]
+  };
+}
+const KEY="vyntec-valley-demo-v1";
+let S;
+try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){ S=null }
+if(!S||!S.items) S = seed();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} }
+let crew = "All", view = "dashboard", openCode = null;
+let scanCode = "";
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const item = c=>S.items.find(i=>i.code===c);
+const visible = ()=>S.items.filter(i=>crew==="All"||i.dept===crew);
+const chip = s=>`<span class="st st-${s.replace(" ","-")}">${esc(s)}</span>`;
+const cssv = n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function when(t){const d=new Date(t);return d.toLocaleDateString([], {month:"short",day:"numeric"})+" "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}
+function toast(msg){const h=$("#toastHost");h.innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`;clearTimeout(toast.t);toast.t=setTimeout(()=>h.innerHTML="",2600)}
+function act(it,status,text,by){
+  it.status=status; if(status==="Ready") it.flag=false;
+  const e={t:Date.now(),by:by||(crew==="All"?"Officer (demo)":crew+" crew (demo)"),text};
+  it.log.unshift(e); S.activity.unshift({...e,code:it.code,name:it.name}); S.activity=S.activity.slice(0,40);
+  save();
+}
+
+/* ---------- nav ---------- */
+const ICONS = {
+ dashboard:'<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 8h6V4h-6z"/>',
+ inventory:'<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>',
+ scan:'<path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3"/><path d="M8 12h8"/>',
+ productions:'<path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v6h-4z"/>',
+ guide:'<circle cx="12" cy="5" r="2.2"/><path d="M8 21l1.5-9h5L16 21M9 12l-3 4M15 12l3 4M9.5 8.5h5"/>',
+ stage:'<path d="M3 20h18M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/>',
+ labels:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>'
+};
+const VIEWS = [["dashboard","Dashboard"],["inventory","Inventory"],["scan","Scan"],["productions","Productions"],["guide","Dressing guide"],["stage","Stage layout"],["labels","QR labels"]];
+function renderNav(){
+  $("#navlist").innerHTML = VIEWS.map(([k,l])=>`<li><button type="button" data-view="${k}" ${k===view?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span class="t">${l}</span></button></li>`).join("");
+}
+document.addEventListener("click",e=>{
+  const v=e.target.closest("[data-view]"); if(v){go(v.dataset.view);return}
+  const c=e.target.closest("[data-crew]"); if(c){crew=c.dataset.crew;document.querySelectorAll("#crewSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b===c)));render();return}
+  const o=e.target.closest("[data-open]"); if(o){openItem(o.dataset.open);return}
+});
+function go(v){view=v;try{history.replaceState(null,"","#"+v)}catch(e){}render();window.scrollTo(0,0)}
+$("#resetBtn").addEventListener("click",()=>{S=seed();save();closeDrawer();render();toast("Demo data reset")});
+
+/* ---------- views ---------- */
+function render(){
+  renderNav();
+  $("#viewTitle").textContent = VIEWS.find(v=>v[0]===view)[1];
+  stopLoops();
+  const f = {dashboard,inventory,scan,productions,guide,stage,labels}[view];
+  $("#view").innerHTML = ""; f($("#view"));
+}
+
+function dashboard(el){
+  const its=visible(), n=s=>its.filter(i=>i.status===s).length;
+  const out=n("Pulled")+n("In use"), notReady=n("Cleaning")+n("Repair");
+  const masks=S.items.filter(i=>i.high), secured=masks.filter(i=>i.status==="Ready").length;
+  const flagged=its.filter(i=>i.flag).length;
+  const seg=(dept)=>{const a=S.items.filter(i=>i.dept===dept);return STATUSES.map(s=>{const k=a.filter(i=>i.status===s).length;return k?`<i style="width:${k/a.length*100}%;background:var(${STATUS_VAR[s]})" title="${s}: ${k}"></i>`:""}).join("")};
+  const next=S.productions.filter(p=>p.stage!=="Reset");
+  el.innerHTML=`
+  ${flagged?`<div class="banner bad"><b>${flagged} item${flagged>1?"s":""} not returned after the end-of-day check.</b> <button class="btn" data-view="productions">Open productions</button></div>`:""}
+  <div class="grid g4">
+    <div class="panel tile"><span class="n">${n("Ready")}</span><span class="l">Ready to pull</span></div>
+    <div class="panel tile"><span class="n">${out}</span><span class="l">Out today (pulled or in use)</span></div>
+    <div class="panel tile ${notReady?"alert":""}"><span class="n">${notReady}</span><span class="l">Not ready (cleaning or repair)</span></div>
+    <div class="panel tile ${secured<masks.length?"alert":""}"><span class="n">${secured}/${masks.length}</span><span class="l">Masks in the locked cabinet</span></div>
+  </div>
+  <div class="grid g32">
+    <div class="panel">
+      <h2>Inventory by status</h2>
+      ${["Wardrobe","Props"].filter(d=>crew==="All"||crew===d).map(d=>`<div style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><b class="small">${d}</b><span class="small muted">${S.items.filter(i=>i.dept===d).length} pieces in demo · about 300 in the real collection</span></div><div class="bar" style="margin-top:6px">${seg(d)}</div></div>`).join("")}
+      <div class="legend">${STATUSES.map(s=>`<span><b style="background:var(${STATUS_VAR[s]})"></b>${s}</span>`).join("")}</div>
+    </div>
+    <div class="panel">
+      <h2>Upcoming productions</h2>
+      <ul class="pull">${next.map(p=>{const g=gaps(p).length;return `<li><span class="code">${esc(p.degree)}</span><span>${esc(p.name)}<br><span class="small muted">${esc(p.date)} · ${esc(p.stage)}</span></span>${g?`<span class="gap">${g} gap${g>1?"s":""}</span>`:`<span class="st st-Ready">Kit ready</span>`}</li>`}).join("")}</ul>
+    </div>
+  </div>
+  <div class="grid g2">
+    <div class="panel"><h2>Needs attention</h2>${attention()}</div>
+    <div class="panel"><h2>Recent activity</h2>${S.activity.length?`<ul class="log">${S.activity.slice(0,8).map(a=>`<li><time>${when(a.t)}</time> · <button class="btn" style="padding:0 6px;font-size:12px" data-open="${a.code}">${a.code}</button> ${esc(a.text)} <span class="muted">(${esc(a.by)})</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing yet. Scan a label to pull or return a piece, and it shows up here.</p>`}</div>
+  </div>`;
+}
+function attention(){
+  const its=visible().filter(i=>i.flag||i.status==="Repair"||i.status==="Cleaning"||(i.high&&i.status!=="Ready"));
+  if(!its.length) return `<p class="muted small" style="margin:0">Everything is back and ready.</p>`;
+  return `<ul class="pull">${its.map(i=>`<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-open="${i.code}">${i.code}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}<br><span class="small muted">${esc(i.condition)} · ${esc(i.location)}</span></span><span></span></li>`).join("")}</ul>`;
+}
+
+let invQ="", invS="", invD="";
+function inventory(el){
+  const degs=[...new Set(S.items.map(i=>i.degree))];
+  el.innerHTML=`
+  <div class="filters">
+    <input type="search" id="invQ" placeholder="Search code, name, location" value="${esc(invQ)}" aria-label="Search inventory">
+    <select id="invS" aria-label="Status"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${s===invS?"selected":""}>${s}</option>`).join("")}</select>
+    <select id="invD" aria-label="Degree"><option value="">All degrees</option>${degs.map(d=>`<option ${d===invD?"selected":""}>${d}</option>`).join("")}</select>
+    <span class="small muted" id="invCount"></span>
+  </div>
+  <div class="tablewrap"><table><thead><tr><th>Code</th><th>Item</th><th>Crew</th><th>Type</th><th>Degree</th><th>Size</th><th>Location</th><th>Status</th><th>Condition</th></tr></thead><tbody id="invBody"></tbody></table></div>
+  <p class="note">In the live system this is the Valley's Inventory Item object inside their account: the same list, filters and record pages, with the crew's own saved views.</p>`;
+  const draw=()=>{
+    const q=invQ.toLowerCase();
+    const rows=visible().filter(i=>(!invS||i.status===invS)&&(!invD||i.degree===invD)&&(!q||(i.code+" "+i.name+" "+i.location+" "+i.type).toLowerCase().includes(q)));
+    $("#invBody").innerHTML=rows.map(i=>`<tr data-open="${i.code}" tabindex="0"><td class="code">${i.code}</td><td><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</td><td>${i.dept}</td><td>${esc(i.type)}</td><td>${i.degree}</td><td>${esc(i.size)}</td><td>${esc(i.location)}</td><td>${chip(i.status)}</td><td>${esc(i.condition)}</td></tr>`).join("")||`<tr><td colspan="9" class="muted">No pieces match these filters.</td></tr>`;
+    $("#invCount").textContent=rows.length+" of "+visible().length+" pieces";
+  };
+  $("#invQ").addEventListener("input",e=>{invQ=e.target.value;draw()});
+  $("#invS").addEventListener("change",e=>{invS=e.target.value;draw()});
+  $("#invD").addEventListener("change",e=>{invD=e.target.value;draw()});
+  $("#invBody").addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.open)openItem(e.target.dataset.open)});
+  draw();
+}
+
+/* ---------- item drawer ---------- */
+function openItem(code){
+  const i=item(code); if(!i) return; openCode=code;
+  $("#drawerHost").innerHTML=`<div class="scrim" id="scrim"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="${esc(i.name)}">
+    <header><div style="flex:1;min-width:0"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2><div class="row" style="margin-top:6px">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</div></div><button class="btn" id="closeD" aria-label="Close">Close</button></header>
+    <div class="body">
+      <dl class="kv"><dt>Crew</dt><dd>${i.dept}</dd><dt>Type</dt><dd>${esc(i.type)}</dd><dt>Degree</dt><dd>${i.degree}</dd><dt>Size</dt><dd>${esc(i.size)}</dd><dt>Location</dt><dd>${esc(i.location)}</dd><dt>Condition</dt><dd>${esc(i.condition)}</dd>${i.high?`<dt>Insured value</dt><dd>${esc(i.value)}</dd><dt>Sign-out</dt><dd>${LEADS.Wardrobe} only</dd>`:""}</dl>
+      <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Actions</h3>${actionsFor(i,"d")}</div>
+      <div><h3 style="font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">History</h3><ul class="log">${i.log.map(l=>`<li><time>${when(l.t)}</time> · ${esc(l.text)} <span class="muted">(${esc(l.by)})</span></li>`).join("")}</ul></div>
+    </div></aside>`;
+  $("#scrim").onclick=closeDrawer; $("#closeD").onclick=closeDrawer;
+  bindActions($("#drawerHost"),i,()=>{openItem(code);render()});
+  $("#closeD").focus();
+}
+function closeDrawer(){openCode=null;$("#drawerHost").innerHTML=""}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openCode)closeDrawer()});
+
+function actionsFor(i,p){
+  const prodOpts=S.productions.filter(x=>x.stage!=="Reset").map(x=>`<option value="${x.id}">${esc(x.name)} · ${x.degree}</option>`).join("");
+  if(i.status==="Ready") return `<div class="scanbox">
+     <label class="small">For production <select id="${p}prod">${prodOpts}</select></label>
+     ${i.high?`<label class="opt"><input type="checkbox" id="${p}lead"> Signed out by the ${LEADS.Wardrobe.replace(" (sample)","")}</label>`:""}
+     <div class="row"><button class="btn primary" data-a="pull">Mark pulled</button></div></div>`;
+  if(i.status==="Pulled") return `<div class="row"><button class="btn primary" data-a="use">Mark in use (dressed / on stage)</button><button class="btn" data-a="back">Put back, not used</button></div>`;
+  if(i.status==="In use") return `<div class="scanbox"><fieldset><legend>Condition on return</legend>
+      <label class="opt"><input type="radio" name="${p}cond" value="ok" checked> Good</label>
+      <label class="opt"><input type="radio" name="${p}cond" value="clean"> Needs cleaning</label>
+      <label class="opt"><input type="radio" name="${p}cond" value="repair"> Needs repair</label></fieldset>
+      ${i.high?`<label class="opt"><input type="checkbox" id="${p}photo"> Return photo taken and checked by the wardrobe lead</label>`:""}
+      <input type="text" id="${p}note" placeholder="Note (optional), e.g. loose clasp">
+      <div class="row"><button class="btn primary" data-a="return">Mark returned</button></div></div>`;
+  if(i.status==="Cleaning"||i.status==="Repair") return `<div class="row"><button class="btn primary" data-a="ready">${i.status==="Cleaning"?"Cleaned":"Repaired"}: mark ready</button><button class="btn danger" data-a="retire">Retire piece</button></div>`;
+  return `<p class="small muted" style="margin:0">Retired pieces stay on record for history.</p>`;
+}
+function bindActions(root,i,after){
+  root.querySelectorAll("[data-a]").forEach(b=>b.addEventListener("click",()=>{
+    const a=b.dataset.a, p=root.id==="drawerHost"?"d":"s";
+    if(a==="pull"){
+      if(i.high&&!$("#"+p+"lead",root).checked){toast("High-value: the wardrobe lead must sign this mask out");return}
+      const pr=S.productions.find(x=>x.id===$("#"+p+"prod",root).value);
+      act(i,"Pulled",`Pulled for ${pr?pr.name+" · "+pr.degree:"production"}`+(i.high?" · signed out by the wardrobe lead":""));toast(i.code+" pulled");
+    }else if(a==="use"){act(i,"In use","Dressed / on stage");toast(i.code+" in use")}
+    else if(a==="back"){act(i,"Ready","Put back unused");toast(i.code+" back on the shelf")}
+    else if(a==="return"){
+      if(i.high&&!$("#"+p+"photo",root).checked){toast("High-value: take and check the return photo first");return}
+      const c=root.querySelector(`input[name="${p}cond"]:checked`).value, note=$("#"+p+"note",root).value.trim();
+      const map={ok:["Ready","Good"],clean:["Cleaning","Needs cleaning"],repair:["Repair",note||"Needs repair"]};
+      i.condition=map[c][1]; act(i,map[c][0],"Returned · "+map[c][1]+(note&&c!=="repair"?" · "+note:"")+(i.high?" · return photo checked":""));
+      toast(map[c][0]==="Ready"?i.code+" returned and ready":i.code+" returned, now "+map[c][0].toLowerCase());
+    }else if(a==="ready"){i.condition="Good";act(i,"Ready",(i.status==="Cleaning"?"Cleaned":"Repaired")+", back to ready");toast(i.code+" ready")}
+    else if(a==="retire"){act(i,"Retired","Retired from use");toast(i.code+" retired")}
+    after();
+  }));
+}
+
+/* ---------- scan ---------- */
+function scan(el){
+  const its=visible();
+  el.innerHTML=`<div class="grid g32">
+   <div class="panel scanbox">
+     <h2>Scan a label</h2>
+     <p class="small muted" style="margin:0">Point a handheld scanner at a tag (it types the code and presses Enter), or type a code. On the live system a phone camera opens the piece straight from its QR tag.</p>
+     <form class="scanfield" id="scanForm"><input id="scanIn" autocomplete="off" placeholder="DEMO-WR-001" value="${esc(scanCode)}" aria-label="Item code"><button class="btn primary">Find</button></form>
+     <div><span class="small muted">Tap to simulate a scan:</span><div class="quick" style="margin-top:6px">${its.map(i=>`<button type="button" data-scan="${i.code}">${i.code}</button>`).join("")}</div></div>
+   </div>
+   <div id="scanResult"></div></div>`;
+  const show=(code)=>{
+    scanCode=code;
+    const i=item(code.trim().toUpperCase()), host=$("#scanResult");
+    if(!code){host.innerHTML=`<div class="panel"><p class="muted" style="margin:0">Scan or type a code and the piece appears here with the next step for it.</p></div>`;return}
+    if(!i){host.innerHTML=`<div class="banner bad">No piece with code “${esc(code)}”. Check the tag, or add it as a new piece during tagging.</div>`;return}
+    if(crew!=="All"&&i.dept!==crew){host.innerHTML=`<div class="banner bad">${esc(i.code)} belongs to the ${i.dept} crew. Hand it to them.</div>`;return}
+    host.innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" id="scanCard"><div class="code muted">${i.code}</div><h2>${esc(i.name)}</h2><div class="row">${chip(i.status)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} <span class="small muted">${esc(i.location)} · ${i.degree} · size ${esc(i.size)}</span></div>${actionsFor(i,"s")}<button class="btn" data-open="${i.code}" style="align-self:flex-start">Open full record</button></div>`;
+    host.id="scanResult";
+    const card=$("#scanCard"); card.id="scanHost";
+    bindActions(card,i,()=>{show(i.code)});
+  };
+  $("#scanForm").addEventListener("submit",e=>{e.preventDefault();show($("#scanIn").value)});
+  el.querySelectorAll("[data-scan]").forEach(b=>b.addEventListener("click",()=>{$("#scanIn").value=b.dataset.scan;show(b.dataset.scan)}));
+  show(scanCode);
+  $("#scanIn").focus();
+}
+
+/* ---------- productions ---------- */
+function kitCodes(p){return [...new Set((KITS[p.degree]||[]).flatMap(r=>r.items))].filter(c=>crew==="All"||item(c).dept===crew)}
+function gaps(p){return kitCodes(p).map(item).filter(i=>!["Ready","Pulled","In use"].includes(i.status))}
+let selProd="P1";
+function productions(el){
+  const p=S.productions.find(x=>x.id===selProd)||S.productions[0];
+  el.innerHTML=`
+  <div class="kanban">${STAGES.map(st=>`<div class="col"><h4>${st}<span>${S.productions.filter(x=>x.stage===st).length}</span></h4>${S.productions.filter(x=>x.stage===st).map(x=>{const g=gaps(x).length;return `<div class="card" style="${x.id===p.id?"border-color:var(--accent)":""}"><b>${esc(x.name)}</b><span class="muted">${x.degree} · ${esc(x.date)}</span>${g?`<span class="gap">${g} kit gap${g>1?"s":""}</span>`:`<span class="small" style="color:var(--ok);font-weight:700">Kit complete</span>`}<div class="row"><button class="btn" data-sel="${x.id}">Pull list</button>${STAGES.indexOf(st)<4?`<button class="btn" data-adv="${x.id}">Move to ${STAGES[STAGES.indexOf(st)+1]}</button>`:""}</div></div>`}).join("")}</div>`).join("")}</div>
+  <div class="grid g2">
+    <div class="panel"><h2>Pull list · ${esc(p.name)} · ${p.degree}</h2>
+      ${(KITS[p.degree]||[]).map(r=>{const codes=r.items.filter(c=>crew==="All"||item(c).dept===crew);if(!codes.length)return"";return `<h3 style="margin-top:10px">${esc(r.role)}</h3><ul class="pull">${codes.map(c=>{const i=item(c),bad=!["Ready","Pulled","In use"].includes(i.status);return `<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-open="${c}">${c}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small muted">${esc(i.location)} · size ${esc(i.size)}</span></span>${bad?`<span class="gap">GAP</span>`:i.status==="Ready"?`<button class="btn" data-pull="${c}">Pull</button>`:`<span></span>`}</li>`}).join("")}</ul>`}).join("")}
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="pullAll">Pull every ready piece</button></div>
+      <p class="note" style="margin-top:12px">Masks are skipped by "Pull every ready piece": the wardrobe lead signs each one out from its record.</p>
+    </div>
+    <div class="panel"><h2>End-of-day check</h2>
+      <p class="small muted" style="margin-top:0">Cast keep nothing, so every piece should be back the same day. The live system runs this check automatically each production night and alerts the crew lead; run it here to see the result.</p>
+      <button class="btn primary" id="eod">Run end-of-day check</button>
+      <div id="eodOut" style="margin-top:12px"></div>
+    </div>
+  </div>`;
+  el.querySelectorAll("[data-sel]").forEach(b=>b.onclick=()=>{selProd=b.dataset.sel;render()});
+  el.querySelectorAll("[data-adv]").forEach(b=>b.onclick=()=>{const x=S.productions.find(y=>y.id===b.dataset.adv);x.stage=STAGES[STAGES.indexOf(x.stage)+1];selProd=x.id;save();render();toast(x.name+" · "+x.degree+" moved to "+x.stage)});
+  el.querySelectorAll("[data-pull]").forEach(b=>b.onclick=()=>{const i=item(b.dataset.pull);if(i.high){openItem(i.code);toast("Masks need the wardrobe lead's sign-out");return}act(i,"Pulled",`Pulled for ${p.name} · ${p.degree}`);render();toast(i.code+" pulled")});
+  $("#pullAll").onclick=()=>{let k=0;kitCodes(p).map(item).forEach(i=>{if(i.status==="Ready"&&!i.high){act(i,"Pulled",`Pulled for ${p.name} · ${p.degree}`);k++}});render();toast(k?k+" pieces pulled":"Nothing ready left to pull")};
+  $("#eod").onclick=()=>{
+    const out=visible().filter(i=>i.status==="Pulled"||i.status==="In use");
+    out.forEach(i=>{if(!i.flag){i.flag=true;i.log.unshift({t:Date.now(),by:"End-of-day check",text:"Not returned by end of production day"})}});save();
+    $("#eodOut").innerHTML=out.length?`<div class="banner bad"><div><b>${out.length} piece${out.length>1?"s":""} not back.</b> ${out.some(i=>i.high)?"<b>Includes a high-value mask: the wardrobe lead is alerted now.</b> ":""}Each is flagged on its record.<ul class="pull" style="margin-top:8px">${out.map(i=>`<li>${chip(i.status)}<span>${i.code} ${esc(i.name)}</span><span></span></li>`).join("")}</ul></div></div>`:`<div class="banner ok">Everything is back. Nothing to chase tonight.</div>`;
+  };
+}
+
+/* ---------- 3D helpers ---------- */
+let loops=[];
+function stopLoops(){loops.forEach(f=>f());loops=[]}
+function have3d(){return typeof THREE!=="undefined"&&THREE.OrbitControls}
+function makeRenderer(wrap){
+  const r=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  r.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  wrap.appendChild(r.domElement);
+  return r;
+}
+function sizeTo(wrap,r,cam){const w=wrap.clientWidth,h=wrap.clientHeight||w*.62;r.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix()}
+function hexOf(v){return new THREE.Color(cssv(v)||"#888")}
+
+/* ---------- dressing guide ---------- */
+let gDeg="32°", gRole=0, gStep=99;
+function guide(el){
+  const roles=KITS[gDeg]; if(gRole>=roles.length) gRole=0;
+  const pieces=roles[gRole].items.map(item).filter(i=>i.dept==="Wardrobe").sort((a,b)=>LAYER_ORDER.indexOf(a.type)-LAYER_ORDER.indexOf(b.type));
+  if(gStep>pieces.length) gStep=pieces.length;
+  el.innerHTML=`<div class="filters">
+     <select id="gDeg" aria-label="Degree">${Object.keys(KITS).map(d=>`<option ${d===gDeg?"selected":""}>${d}</option>`).join("")}</select>
+     <select id="gRole" aria-label="Role">${roles.map((r,k)=>`<option value="${k}" ${k===gRole?"selected":""}>${esc(r.role)}</option>`).join("")}</select>
+     <span class="small muted">Sample roles and instructions. The Valley's wardrobe crew writes the real ones.</span></div>
+   <div class="grid g32">
+     <div class="stagewrap" id="mWrap"><div class="loading3d" id="mLoad">Loading 3D view…</div></div>
+     <div class="panel"><h2>${gDeg} · ${esc(roles[gRole].role)}: dressing order</h2>
+       <label class="small muted" for="gStep">Dressed through step <b id="gStepN">${gStep}</b> of ${pieces.length}</label>
+       <input type="range" id="gStep" min="0" max="${pieces.length}" value="${gStep}">
+       <ol class="steps" id="gSteps">${pieces.map((i,k)=>`<li data-step="${k+1}" class="${k+1===gStep?"on":k+1>gStep?"future":""}"><span><b>${esc(i.name)}</b> <button class="btn" style="padding:0 6px;font-size:12px" data-open="${i.code}">${i.code}</button> ${i.high?'<span class="hv">HIGH VALUE</span>':""}<br><span class="small">${esc(DRESS[i.type]||"Dress as shown.")}</span><br><span class="small muted">From ${esc(i.location)} · size ${esc(i.size)} · ${chip(i.status)}</span></span></li>`).join("")}</ol>
+       <p class="note" style="margin-top:12px">In the live system each role is a lesson in the Valley's private Wardrobe & Props Guide course, with front, back and side photos of the real costume and a 360° phone video.</p>
+     </div></div>`;
+  $("#gDeg").onchange=e=>{gDeg=e.target.value;gRole=0;gStep=99;render()};
+  $("#gRole").onchange=e=>{gRole=+e.target.value;gStep=99;render()};
+  const setStep=v=>{gStep=v;$("#gStepN").textContent=v;$("#gStep").value=v;$("#gSteps").querySelectorAll("li").forEach(li=>{const s=+li.dataset.step;li.className=s===v?"on":s>v?"future":""});layers.forEach((m,k)=>m.visible=k<v)};
+  $("#gStep").oninput=e=>setStep(+e.target.value);
+  $("#gSteps").addEventListener("click",e=>{if(e.target.closest("[data-open]"))return;const li=e.target.closest("li");if(li)setStep(+li.dataset.step)});
+  let layers=[];
+  if(!have3d()){$("#mLoad").textContent="The 3D view needs WebGL and couldn't load here. The dressing steps still work.";return}
+  const wrap=$("#mWrap"); $("#mLoad").remove();
+  const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
+  const cam=new THREE.PerspectiveCamera(35,1.6,.1,100); cam.position.set(0,1.6,6.2);
+  const r=makeRenderer(wrap); sizeTo(wrap,r,cam);
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,1.15,0); ctl.enablePan=false; ctl.minDistance=3; ctl.maxDistance=9; ctl.autoRotate=!matchMedia("(prefers-reduced-motion: reduce)").matches; ctl.autoRotateSpeed=1.4; ctl.update();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x444455,.9)); const dl=new THREE.DirectionalLight(0xffffff,.8); dl.position.set(3,5,4); scene.add(dl);
+  const skin=new THREE.MeshStandardMaterial({color:0xc9b8a6,roughness:.9});
+  const add=(g,m,x,y,z)=>{const o=new THREE.Mesh(g,m);o.position.set(x,y,z);scene.add(o);return o};
+  // mannequin
+  add(new THREE.CylinderGeometry(.6,.6,.06,32),new THREE.MeshStandardMaterial({color:0x555b66}),0,.03,0);
+  add(new THREE.SphereGeometry(.2,24,16),skin,0,2.12,0);
+  add(new THREE.CylinderGeometry(.08,.09,.14,16),skin,0,1.92,0);
+  add(new THREE.CylinderGeometry(.27,.22,.85,24),skin,0,1.45,0);
+  add(new THREE.CylinderGeometry(.22,.2,.25,24),skin,0,.95,0);
+  [-.11,.11].forEach(x=>add(new THREE.CylinderGeometry(.075,.065,.82,12),skin,x,.43,0));
+  [-.36,.36].forEach(x=>{const a=add(new THREE.CylinderGeometry(.055,.05,.78,12),skin,x,1.42,0);a.rotation.z=x>0?.18:-.18});
+  const col={Robe:0x1d1f26,Tunic:0xeeeeea,Coat:0x2a2f48,Cape:0x8e1b2c,Sash:0x2f5fb3,Collar:0xc9a227,Gloves:0xf2f2ee,Footwear:0x6b4a2b,Headpiece:0x7a5a1e,Mask:0xd8c36a};
+  const mat=t=>new THREE.MeshStandardMaterial({color:col[t]||0x888888,roughness:.7,metalness:t==="Collar"||t==="Mask"?.45:0,side:THREE.DoubleSide});
+  const build=(i)=>{
+    const g=new THREE.Group(); const m=mat(i.type);
+    const put=(geo,x,y,z,rx=0,rz=0)=>{const o=new THREE.Mesh(geo,m);o.position.set(x,y,z);o.rotation.x=rx;o.rotation.z=rz;g.add(o)};
+    switch(i.type){
+      case "Robe":case "Tunic":case "Coat":{const len=i.type==="Tunic"?1.0:1.75;put(new THREE.CylinderGeometry(.3,i.type==="Tunic"?.36:.48,len,32,1,true),0,1.86-len/2,0);[-.37,.37].forEach(x=>put(new THREE.CylinderGeometry(.075,.1,.62,12),x,1.52,0,0,x>0?.18:-.18));break}
+      case "Cape":put(new THREE.CylinderGeometry(.34,.62,1.5,32,1,true,Math.PI*.15,Math.PI*1.7),0,1.15,-.02);break;
+      case "Sash":{const s=new THREE.BoxGeometry(.13,1.05,.36);put(s,0,1.45,0,0,-.62);break}
+      case "Collar":put(new THREE.TorusGeometry(.24,.05,10,32),0,1.86,0,Math.PI/2);put(new THREE.ConeGeometry(.09,.22,4),0,1.68,.27,Math.PI);break;
+      case "Gloves":[-.44,.44].forEach(x=>put(new THREE.SphereGeometry(.075,12,10),x,1.02,0));break;
+      case "Footwear":[-.11,.11].forEach(x=>put(new THREE.BoxGeometry(.14,.07,.3),x,.07,.05));break;
+      case "Headpiece":put(new THREE.CylinderGeometry(.19,.22,.26,24),0,2.33,0);put(new THREE.TorusGeometry(.215,.025,8,32),0,2.22,0,Math.PI/2);break;
+      case "Mask":put(new THREE.SphereGeometry(.205,24,16,-Math.PI*.35,Math.PI*.7,Math.PI*.25,Math.PI*.42),0,2.12,.01);break;
+      default:put(new THREE.BoxGeometry(.2,.2,.2),0,1.4,.3);
+    }
+    scene.add(g); return g;
+  };
+  layers=pieces.map(build); layers.forEach((m,k)=>m.visible=k<gStep);
+  let raf=0,alive=true; const tick=()=>{if(!alive)return;ctl.update();r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
+  const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
+  ctl.addEventListener("start",()=>ctl.autoRotate=false);
+  loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+}
+
+/* ---------- stage layout ---------- */
+let sDeg="18°", sScene=0, sTop=false;
+function stage(el){
+  el.innerHTML=`<div class="filters">
+     <select id="sDeg" aria-label="Degree">${Object.keys(STAGE_LAYOUT).map(d=>`<option ${d===sDeg?"selected":""}>${d}</option>`).join("")}</select>
+     <div class="seg" role="group" aria-label="Scene">${[0,1].map(k=>`<button type="button" data-scene="${k}" aria-pressed="${k===sScene}">Scene ${k+1}</button>`).join("")}</div>
+     <div class="seg" role="group" aria-label="Camera"><button type="button" data-cam="3d" aria-pressed="${!sTop}">3D</button><button type="button" data-cam="top" aria-pressed="${sTop}">Top-down plot</button></div>
+     <span class="small muted">Generic stage and sample positions. The Valley's props lead sets the real layout.</span></div>
+   <div class="grid g32">
+     <div class="stagewrap" id="sWrap"><div class="loading3d" id="sLoad">Loading 3D stage…</div><div class="stage-card" id="sCard"></div></div>
+     <div class="panel"><h2>${sDeg} · Scene ${sScene+1}: props on stage</h2><ul class="pull" id="sList"></ul>
+       <p class="note" style="margin-top:12px">Tap a prop on the stage or in this list. Color shows its status; a red ring marks a piece that isn't ready. In the live system this view sits in the Valley's private guide and links to each prop's record.</p></div></div>`;
+  const placed=STAGE_LAYOUT[sDeg][sScene];
+  $("#sList").innerHTML=placed.map(pp=>{const i=item(pp.c);return `<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-pick="${i.code}">${i.code}</button> ${esc(i.name)}<br><span class="small muted">From ${esc(i.location)}</span></span>${i.status==="Ready"||i.status==="Pulled"||i.status==="In use"?"<span></span>":'<span class="gap">GAP</span>'}</li>`}).join("");
+  $("#sDeg").onchange=e=>{sDeg=e.target.value;sScene=0;render()};
+  el.querySelectorAll("[data-scene]").forEach(b=>b.onclick=()=>{sScene=+b.dataset.scene;render()});
+  el.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>{sTop=b.dataset.cam==="top";render()});
+  const card=code=>{const i=item(code);$("#sCard").innerHTML=`<div class="itemcard ${i.high?"hv-card":""}" style="padding:12px;gap:6px"><div class="code muted">${i.code}</div><b>${esc(i.name)}</b><div class="row">${chip(i.status)}</div><span class="small muted">${esc(i.location)} · ${esc(i.condition)}</span><button class="btn" data-open="${i.code}" style="align-self:flex-start">Open record</button></div>`};
+  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{card(b.dataset.pick);highlight(b.dataset.pick)});
+  let highlight=()=>{};
+  if(!have3d()){$("#sLoad").textContent="The 3D stage needs WebGL and couldn't load here. The props list still works.";return}
+  const wrap=$("#sWrap"); $("#sLoad").remove();
+  const scene=new THREE.Scene(); scene.background=hexOf("--sunk");
+  const cam=new THREE.PerspectiveCamera(40,1.6,.1,200);
+  if(sTop){cam.position.set(0,17,0.01)}else{cam.position.set(0,7.2,14.5)}
+  const r=makeRenderer(wrap); wrap.insertBefore(r.domElement,$("#sCard")); sizeTo(wrap,r,cam);
+  const ctl=new THREE.OrbitControls(cam,r.domElement); ctl.target.set(0,.6,-1.2); ctl.maxPolarAngle=sTop?0.01:Math.PI*.47; ctl.minDistance=5; ctl.maxDistance=22; ctl.enableRotate=!sTop; ctl.update();
+  scene.add(new THREE.HemisphereLight(0xffffff,0x333344,.85)); const sp=new THREE.DirectionalLight(0xfff1dc,.9); sp.position.set(-4,9,6); scene.add(sp);
+  const M=(c,o={})=>new THREE.MeshStandardMaterial({color:c,roughness:.85,...o});
+  const box=(w,h,d,m,x,y,z)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);scene.add(o);return o};
+  box(14,.1,10,M(0x2b2e36),0,-.05,0);           // house floor
+  box(10,.5,6.4,M(0x5a3d29),0,.25,-1);          // stage deck
+  box(4,.35,1.6,M(0x4a3222),0,.67,-3.2);        // upstage riser
+  box(.6,4.6,.6,M(0x3a1f2b),-5.3,2.3,2.2); box(.6,4.6,.6,M(0x3a1f2b),5.3,2.3,2.2); box(11.2,.7,.6,M(0x3a1f2b),0,4.45,2.2); // proscenium
+  [-1,1].forEach(s=>{for(let k=0;k<3;k++)box(.15,3.6,1,M(0x23262d),s*(4.2+k*.25),1.8+.5,-k*1.8)}); // wing flats
+  box(10,3.8,.15,M(0x161a22),0,2.4,-4.25);      // back wall
+  // floor marks: centre line + quadrant labels as thin strips
+  box(.04,.02,6,M(0xe0c48a),0,.51,-1);
+  const meshes={};
+  placed.forEach(pp=>{
+    const i=item(pp.c); const st=i.status; const color=hexOf(STATUS_VAR[st]);
+    const m=M(color,{emissive:color,emissiveIntensity:.18});
+    let g;
+    if(i.type==="Stage weapon"){g=new THREE.Mesh(new THREE.BoxGeometry(.08,1.1,.08),m);g.position.set(pp.x,1.05,pp.z);g.rotation.z=.25}
+    else if(i.type==="Set piece"&&i.name.includes("chair")){g=new THREE.Group();const s=new THREE.Mesh(new THREE.BoxGeometry(1,.5,.9),m);s.position.y=.25;const b=new THREE.Mesh(new THREE.BoxGeometry(1,1.4,.15),m);b.position.set(0,.95,-.38);g.add(s,b);g.position.set(pp.x,pp.z<-2.4?.85:.5,pp.z)}
+    else if(i.type==="Set piece"){g=new THREE.Mesh(new THREE.CylinderGeometry(.08,.22,1.4,16),m);g.position.set(pp.x,1.2,pp.z)}
+    else if(i.type==="Set dressing"){g=new THREE.Mesh(new THREE.BoxGeometry(1.2,i.name==="Banner"?1.8:.06,i.name==="Banner"?.05:.8),m);g.position.set(pp.x,i.name==="Banner"?1.6:.55,pp.z)}
+    else {g=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.5,20),m);g.position.set(pp.x,.75,pp.z)}
+    g.userData.code=i.code; scene.add(g); meshes[i.code]=g;
+    if(!["Ready","Pulled","In use"].includes(st)){const ring=new THREE.Mesh(new THREE.TorusGeometry(.55,.04,8,40),M(hexOf("--bad"),{emissive:hexOf("--bad"),emissiveIntensity:.6}));ring.rotation.x=Math.PI/2;ring.position.set(pp.x,.53,pp.z);scene.add(ring)}
+  });
+  let sel=null;
+  highlight=code=>{Object.values(meshes).forEach(o=>o.scale.setScalar(1));sel=meshes[code]||null;if(sel)sel.scale.setScalar(1.25)};
+  const ray=new THREE.Raycaster(), v=new THREE.Vector2();
+  r.domElement.addEventListener("click",e=>{const b=r.domElement.getBoundingClientRect();v.x=((e.clientX-b.left)/b.width)*2-1;v.y=-((e.clientY-b.top)/b.height)*2+1;ray.setFromCamera(v,cam);const hit=ray.intersectObjects(Object.values(meshes),true)[0];if(hit){let o=hit.object;while(o&&!o.userData.code)o=o.parent;if(o){card(o.userData.code);highlight(o.userData.code)}}});
+  let raf=0,alive=true,t0=performance.now();const tick=()=>{if(!alive)return;ctl.update();if(sel)sel.rotation.y=(performance.now()-t0)/900;r.render(scene,cam);raf=requestAnimationFrame(tick)};tick();
+  const ro=new ResizeObserver(()=>sizeTo(wrap,r,cam)); ro.observe(wrap);
+  loops.push(()=>{alive=false;cancelAnimationFrame(raf);ro.disconnect();ctl.dispose();r.dispose()});
+  card(placed[0].c);
+}
+
+/* ---------- labels ---------- */
+function labels(el){
+  const its=visible();
+  el.innerHTML=`<p class="small muted" style="margin:0">One tag per piece: sewn-in or heat-transfer tags for garments, hard tags for props. Tap a tag to scan it in this demo. On the live system the QR opens the piece's record on the crew member's phone.</p>
+  <div class="labels" id="lab">${its.map(i=>`<button type="button" class="label" data-scantag="${i.code}" aria-label="Scan ${i.code}"><div class="qr" id="qr-${i.code}"></div><b>${i.code}</b><span>${esc(i.name)}${i.size&&i.size!=="-"?" · "+esc(i.size):""}<br>${esc(i.location)}</span></button>`).join("")}</div>`;
+  if(typeof QRCode!=="undefined") its.forEach(i=>{try{new QRCode(document.getElementById("qr-"+i.code),{text:i.code,width:104,height:104,correctLevel:QRCode.CorrectLevel.M})}catch(e){}});
+  else el.querySelectorAll(".qr").forEach(q=>q.textContent="QR");
+  el.querySelectorAll("[data-scantag]").forEach(b=>b.onclick=()=>{scanCode=b.dataset.scantag;go("scan")});
+}
+
+/* ---------- boot ---------- */
+const h=(location.hash||"").replace("#","");
+if(VIEWS.some(v=>v[0]===h)) view=h;
+render();
+})();
+</script>
