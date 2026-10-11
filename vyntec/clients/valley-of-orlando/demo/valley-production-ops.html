@@ -165,6 +165,7 @@ dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;max-height:85vh;overflow-y:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:6px 16px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25)}
 .sheethead{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--surface);padding:12px 2px 8px}
 .sheet h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:14px 2px 8px}
+.sheetbrand{display:flex;align-items:center;gap:12px;padding:4px 2px 2px}.sheetbrand img{height:64px;width:auto;border-radius:8px;border:1px solid var(--line)}
 .sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .sgrid button{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;font-weight:600;font-size:14px;min-height:52px}
 .sgrid button svg{width:20px;height:20px;flex:none;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -269,7 +270,9 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 @media (max-width:760px){
   .app{grid-template-columns:minmax(0,1fr)}
   .nav{position:sticky;top:0;height:auto;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;z-index:10}
-  .brand span,.nav .foot,.clientlogo,.nav ul{display:none}
+  .brand span,.nav .foot,.nav ul{display:none}
+  .brand{flex-direction:row;align-items:center;gap:10px;min-width:0}
+  .clientlogo{height:40px;width:auto;max-width:none;margin:0;border-radius:6px}
   .nav .navmenu{display:inline-flex;align-items:center;gap:8px;width:auto!important;border:1px solid rgba(255,255,255,.2)!important;padding:7px 12px!important;font-weight:600!important}
   .tabbar{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
   .tabbar button{border:0;background:none;padding:8px 2px 9px;font-size:11px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;min-width:0}
@@ -473,7 +476,7 @@ function fillSheet(groups){
   $("#sheetBody").innerHTML=groups.map(([g,ks])=>`<h3>${g}</h3><div class="sgrid">${ks.map(k=>navBtn(k)).join("")}</div>`).join("")+`<p class="small muted" style="margin:14px 2px 0">Demo by vyntec with sample data. Not an official Valley of Orlando page.</p>`;
 }
 function openNavSheet(){
-  $("#sheetHost").innerHTML=`<div class="scrim" id="sheetScrim"></div><div class="sheet" id="navSheet" role="dialog" aria-modal="true" aria-label="All screens"><div class="sheethead"><b>All screens</b><button type="button" class="btn" id="sheetClose">Close</button></div><div id="sheetBody"></div></div>`;
+  $("#sheetHost").innerHTML=`<div class="scrim" id="sheetScrim"></div><div class="sheet" id="navSheet" role="dialog" aria-modal="true" aria-label="All screens"><div class="sheethead"><b>All screens</b><button type="button" class="btn" id="sheetClose">Close</button></div><div class="sheetbrand"><img src="${$(".clientlogo").src}" alt="Orlando Scottish Rite, Valley of Orlando"><span class="small muted">Production Operations, prepared by vyntec for the Valley of Orlando</span></div><div id="sheetBody"></div></div>`;
   const shown=navViews().map(v=>v[0]);
   fillSheet(NAV_GROUPS.map(([g,ks])=>[g,ks.filter(k=>shown.includes(k))]).filter(x=>x[1].length));
   $("#sheetScrim").onclick=closeNavSheet; $("#sheetClose").onclick=closeNavSheet;
