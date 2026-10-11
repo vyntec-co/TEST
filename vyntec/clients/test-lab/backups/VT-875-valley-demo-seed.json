@@ -1,0 +1,29 @@
+{
+  "note": "DEMO SAMPLE DATA for the Valley of Orlando pitch (VT-875). Invented sample items, not the Valley's inventory. Created in the vyntec Test Lab only. Backup = this list: undo by deleting records whose code starts with DEMO-.",
+  "object": "Inventory Item (create in the Test Lab UI first; key to be filled in)",
+  "fields": ["code", "department", "type", "degree", "size", "location", "status", "condition", "high_value", "insured_value"],
+  "records": [
+    {"name": "Black robe", "code": "DEMO-WR-001", "department": "Wardrobe", "type": "Robe", "degree": "4°", "size": "L", "location": "Wardrobe Rack A1", "status": "Ready", "condition": "Good"},
+    {"name": "Black robe", "code": "DEMO-WR-002", "department": "Wardrobe", "type": "Robe", "degree": "4°", "size": "XL", "location": "Wardrobe Rack A1", "status": "Ready", "condition": "Good"},
+    {"name": "White tunic", "code": "DEMO-WR-003", "department": "Wardrobe", "type": "Tunic", "degree": "14°", "size": "M", "location": "Wardrobe Rack A2", "status": "Cleaning", "condition": "Needs cleaning"},
+    {"name": "Red cape", "code": "DEMO-WR-004", "department": "Wardrobe", "type": "Cape", "degree": "18°", "size": "One size", "location": "Wardrobe Rack B1", "status": "Ready", "condition": "Good"},
+    {"name": "Gold-trim collar", "code": "DEMO-WR-005", "department": "Wardrobe", "type": "Collar", "degree": "18°", "size": "One size", "location": "Wardrobe Drawer C3", "status": "Ready", "condition": "Good"},
+    {"name": "Headdress", "code": "DEMO-WR-006", "department": "Wardrobe", "type": "Headpiece", "degree": "32°", "size": "M", "location": "Wardrobe Shelf D2", "status": "Repair", "condition": "Torn lining"},
+    {"name": "Sash (blue)", "code": "DEMO-WR-007", "department": "Wardrobe", "type": "Sash", "degree": "14°", "size": "One size", "location": "Wardrobe Drawer C1", "status": "Ready", "condition": "Good"},
+    {"name": "Long coat", "code": "DEMO-WR-008", "department": "Wardrobe", "type": "Coat", "degree": "32°", "size": "L", "location": "Wardrobe Rack B2", "status": "Ready", "condition": "Good"},
+    {"name": "Sandals", "code": "DEMO-WR-009", "department": "Wardrobe", "type": "Footwear", "degree": "4°", "size": "11", "location": "Wardrobe Bin E1", "status": "Ready", "condition": "Worn"},
+    {"name": "Gloves (white)", "code": "DEMO-WR-010", "department": "Wardrobe", "type": "Accessory", "degree": "18°", "size": "L", "location": "Wardrobe Bin E2", "status": "Ready", "condition": "Good"},
+    {"name": "Stage sword (blunt)", "code": "DEMO-PR-001", "department": "Props", "type": "Weapon (stage)", "degree": "14°", "size": "-", "location": "Props Cage 1", "status": "Ready", "condition": "Good"},
+    {"name": "Stage sword (blunt)", "code": "DEMO-PR-002", "department": "Props", "type": "Weapon (stage)", "degree": "14°", "size": "-", "location": "Props Cage 1", "status": "Ready", "condition": "Good"},
+    {"name": "Staff", "code": "DEMO-PR-003", "department": "Props", "type": "Hand prop", "degree": "4°", "size": "-", "location": "Props Rack 2", "status": "Ready", "condition": "Good"},
+    {"name": "Lantern", "code": "DEMO-PR-004", "department": "Props", "type": "Hand prop", "degree": "18°", "size": "-", "location": "Props Shelf 3", "status": "Repair", "condition": "Cracked glass"},
+    {"name": "Scroll", "code": "DEMO-PR-005", "department": "Props", "type": "Hand prop", "degree": "32°", "size": "-", "location": "Props Shelf 3", "status": "Ready", "condition": "Good"},
+    {"name": "Chalice", "code": "DEMO-PR-006", "department": "Props", "type": "Hand prop", "degree": "18°", "size": "-", "location": "Props Cabinet 4", "status": "Ready", "condition": "Good"},
+    {"name": "Throne chair", "code": "DEMO-PR-007", "department": "Props", "type": "Set piece", "degree": "32°", "size": "-", "location": "Stage Storage Bay", "status": "Ready", "condition": "Good"},
+    {"name": "Altar cloth", "code": "DEMO-PR-008", "department": "Props", "type": "Set dressing", "degree": "4°", "size": "-", "location": "Props Cabinet 4", "status": "Ready", "condition": "Good"},
+    {"name": "Banner", "code": "DEMO-PR-009", "department": "Props", "type": "Set dressing", "degree": "14°", "size": "-", "location": "Props Rack 2", "status": "Ready", "condition": "Faded"},
+    {"name": "Candle stand", "code": "DEMO-PR-010", "department": "Props", "type": "Set piece", "degree": "18°", "size": "-", "location": "Stage Storage Bay", "status": "Ready", "condition": "Good"},
+    {"name": "Ceremonial mask 1", "code": "DEMO-MK-001", "department": "Wardrobe", "type": "Mask", "degree": "32°", "size": "One size", "location": "Locked Mask Cabinet", "status": "Ready", "condition": "Good", "high_value": true},
+    {"name": "Ceremonial mask 2", "code": "DEMO-MK-002", "department": "Wardrobe", "type": "Mask", "degree": "32°", "size": "One size", "location": "Locked Mask Cabinet", "status": "Ready", "condition": "Good", "high_value": true}
+  ]
+}
