@@ -11,7 +11,7 @@
 - Special handling: 6 very expensive masks. Nothing else needs special handling.
 
 ## Design (proposal draft, not built)
-- Custom objects: **Item** (wardrobe or props), **Degree / Role** with a kit list, **Production** (reunion or degree day) with **Cast assignments**.
+- Custom objects (creating the object itself is Browser only: no API op for a new object schema, REAL 2026-10-11; fields, records, search and contact links are API): **Item** (wardrobe or props), **Degree / Role** with a kit list, **Production** (reunion or degree day) with **Cast assignments**.
 - Two departments, two crews: Item has Department = Wardrobe | Props; each crew gets its own views, pull lists, forms and notifications.
 - Flow per production: pull list → scan Pulled → scan In use → same-day return scan with condition → cleaning/repair tasks → Ready. Anything not back by end of the production day is flagged that night.
 - **Masks (6):** high-value tier: own tag and photo, value recorded, check-out only by the wardrobe lead, photo + condition sign-off at return, locked storage location, immediate alert if not returned.
