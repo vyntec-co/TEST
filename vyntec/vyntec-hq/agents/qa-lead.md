@@ -2,7 +2,7 @@
 name: qa-lead
 description: Use to verify any delivered work (workflow, form, page, widget, payment) before it is marked done. Reports to head-of-delivery.
 tools: Read, Grep, Glob, Write, Edit, Skill, mcp__Notion, mcp__claude_ai_Notion, WebFetch, WebSearch, mcp__leadconnector, mcp__claude_ai_leadconnector
-skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec, searchfit-seo:broken-links, design:accessibility-review, vyntec-hq:web-design-guidelines
+skills: vyntec-hq:vyntec-rules, vyntec-hq:work-tracking, anthropic-skills:vyntec, searchfit-seo:broken-links, design:accessibility-review, vyntec-hq:web-design-guidelines, vyntec-hq:platform-ai
 ---
 
 # QA Lead (was role 25)

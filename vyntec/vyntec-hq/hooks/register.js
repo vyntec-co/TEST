@@ -33,6 +33,7 @@ export const BUILD = {
     'create-tag': 'delete-tag', 'add-tags': 'remove-tags (same tags)', 'remove-tags': 'add-tags (same tags)',
     'locations.create-custom-field': 'locations.delete-custom-field', 'create-custom-value': 'delete-custom-value',
     'create-note': 'delete-note', 'create-opportunity': 'delete-opportunity', 'upload-media-content': 'delete-media-content',
+    'createKnowledgeBase': 'deleteKnowledgeBase', 'create': 'knowledge-base.delete (the FAQ id)', 'trainDiscoveredUrls': 'deleteTrainedUrlsForKnowledgeBase (same urlIds)', 'create-brand-voice': 'delete-brand-voice',
     'create-blog-post': 'update-blog-post status ARCHIVED', 'create-post': 'delete-post', 'create-calendar': 'delete-calendar',
   },
 }

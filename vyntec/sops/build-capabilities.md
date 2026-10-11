@@ -144,3 +144,6 @@ Go-live: pointing a live domain is T2: needs `Go live: domain <domain> — <clie
 - Draft the brief would have written (not created): "Hi Michael, following up on the pricing proposal with Finance. We're finishing the Partner Assessment Form on our side and will send it over shortly so your team can get started. Talk soon, Vinny Mele · vyntec".
 - The routine trig_01MYScY32jTUQnZVYdTwd6DA still has the old FOLLOW-UPS line: sops/scheduled/morning-brief.md has the new one; saving it to the routine waits for Vinny's yes.
 - Fake reply test on "Waiting: Pilot reply — vyntec Test Lab": the reply note was added and the task moved Waiting on someone → Queued, Follow up cleared. PASS.
+
+## Platform AI (voice agents, knowledge bases, AI Studio)
+See `vyntec-hq/skills/platform-ai/SKILL.md`: knowledge bases and FAQs are API (write), Voice AI is API but writes are blocked in the mod (phone system), call logs and chat widgets are read; AI Studio, Conversation AI bots, Agent Studio and Ask AI have no MCP route (Browser / Human only). All INFERRED until piloted.
