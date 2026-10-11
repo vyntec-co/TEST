@@ -261,6 +261,22 @@ const STAGE_LAYOUT = {
  "18°":[[{c:"DEMO-PR-010",x:-1.6,z:-2.0},{c:"DEMO-PR-006",x:0,z:-1.4},{c:"DEMO-PR-004",x:2.6,z:0.8}],[{c:"DEMO-PR-010",x:1.6,z:-2.0},{c:"DEMO-PR-006",x:-0.8,z:0.2},{c:"DEMO-PR-004",x:-2.8,z:-0.6}]],
  "32°":[[{c:"DEMO-PR-007",x:0,z:-2.6},{c:"DEMO-PR-005",x:2.2,z:-0.4}],[{c:"DEMO-PR-007",x:-2.4,z:-2.2},{c:"DEMO-PR-005",x:0.4,z:0.6}]]
 };
+// Sample people for the demo only (invented names, not Valley members)
+const MEMBERS=[["R. Alvarez",["Cast"],34],["T. Bennett",["Cast","Wardrobe crew"],52],["M. Chen",["Props crew"],41],["D. Okafor",["Cast"],18],["S. Patel",["Wardrobe crew"],27],["J. Romano",["Props crew"],63],["K. Walsh",["Cast"],22],["L. Nguyen",["Wardrobe crew","Cast"],12],["P. Harris",["Props crew"],9],["G. Moreno",["Cast"],45],["B. Fischer",["Reunion day volunteer"],15],["A. Coleman",["Reunion day volunteer","Props crew"],30]];
+const CANDS=[["C. Dunn","4°–14°","Confirmed","Lodge sponsor (sample)"],["H. Ortiz","4°–14°","Registered","Website form"],["W. Price","4°–32°","Confirmed","Lodge sponsor (sample)"],["F. Ibrahim","15°–18°","Registered","Website form"],["V. Kowalski","19°–32°","Checked in","Lodge sponsor (sample)"],["Y. Tanaka","4°–32°","Registered","Event table"],["Q. Rhodes","15°–18°","Confirmed","Website form"],["E. Lindqvist","19°–32°","Registered","Lodge sponsor (sample)"]];
+const CAND_STAGES=["Registered","Confirmed","Checked in","Conferred"];
+const POINTS={cast:10,crew:5,checkin:5,rehearsal:3};
+const SCHEDULE=[
+ {day:"Saturday, Nov 7 (sample)",items:[["6:30 AM","Crew call: wardrobe and props","Crew"],["7:15 AM","Volunteer and cast check-in opens","All"],["7:30 AM","Candidate registration and check-in","Candidates"],["8:30 AM","Opening and welcome","All"],["9:00 AM","4° production","Cast"],["10:45 AM","Reset: return and turn around 4° kit","Crew"],["11:15 AM","14° production","Cast"],["12:30 PM","Lunch","All"],["1:30 PM","Rehearsal for Sunday cast","Cast"],["4:00 PM","End-of-day inventory check","Crew"]]},
+ {day:"Sunday, Nov 8 (sample)",items:[["7:00 AM","Crew call: wardrobe and props","Crew"],["7:45 AM","Check-in","All"],["8:30 AM","18° production","Cast"],["10:30 AM","Reset: 18° kit","Crew"],["11:00 AM","32° production","Cast"],["1:00 PM","Class reception","All"],["2:30 PM","Final return and end-of-day check","Crew"]]}
+];
+const TEMPLATES=[
+ {id:"cast-confirm",name:"Cast confirmation",ch:"Email",aud:"Cast with a confirmed role",body:"Hi {first},\n\nThank you for taking the {role} in the {degree} on {date}. Crew call is {call}. Wardrobe will have your costume ready; nothing to bring.\n\nReply here if anything changes.\n\nValley of Orlando Reunion Committee"},
+ {id:"rehearsal",name:"Rehearsal reminder",ch:"SMS",aud:"Cast for Sunday",body:"Reminder: Sunday cast rehearsal Sat 1:30 PM. Reply STOP to opt out."},
+ {id:"crew-call",name:"Crew call",ch:"SMS",aud:"Wardrobe and props crew",body:"Crew call 6:30 AM Saturday. Pull lists are ready in the app."},
+ {id:"cand-welcome",name:"Candidate welcome and what to expect",ch:"Email",aud:"Registered and confirmed candidates",body:"Dear {first},\n\nWelcome to the Fall Reunion. Registration opens Saturday at 7:30 AM. Please bring your dues card. Your class: {degrees}.\n\nValley of Orlando Reunion Committee"},
+ {id:"thanks",name:"Thank you and points earned",ch:"Email",aud:"Everyone who served this reunion",body:"Hi {first},\n\nThank you for serving at the Fall Reunion. You earned {pts} volunteer points this reunion, {total} in total.\n\nValley of Orlando Reunion Committee"}
+];
 function seed(){
   const now = Date.now();
   return {
@@ -271,13 +287,22 @@ function seed(){
       {id:"P3",name:"Fall Reunion, Day 2",date:"Sun, Nov 8 (sample)",degree:"18°",stage:"Planning"},
       {id:"P4",name:"Fall Reunion, Day 2",date:"Sun, Nov 8 (sample)",degree:"32°",stage:"Planning"}
     ],
-    activity:[]
+    activity:[],
+    members: MEMBERS.map((m,k)=>({id:"MBR-"+String(k+1).padStart(3,"0"),name:m[0],interest:m[1],points:m[2],checkedIn:false,log:[{t:now-864e5*20,text:"Points carried over from last reunion",pts:m[2]}]})),
+    candidates: CANDS.map((c,k)=>({id:"CND-"+String(k+1).padStart(3,"0"),name:c[0],degrees:c[1],status:c[2],from:c[3]})),
+    slots: [],
+    queue: []
   };
 }
-const KEY="vyntec-valley-demo-v1";
+function seedSlots(st){
+  const pre={"P1-0":["MBR-001","Confirmed"],"P1-1":["MBR-004","Signed up"],"P2-0":["MBR-002","Confirmed"],"P3-0":["MBR-007","Signed up"],"P4-1":["MBR-010","Confirmed"]};
+  st.slots=[];st.productions.forEach(p=>(KITS[p.degree]||[]).forEach((r,k)=>{const id=p.id+"-"+k,a=pre[id];st.slots.push({id,prod:p.id,role:r.role,member:a?a[0]:null,status:a?a[1]:"Open"})}));
+  return st;
+}
+const KEY="vyntec-valley-demo-v2";
 let S;
 try{ S = JSON.parse(localStorage.getItem(KEY)) }catch(e){ S=null }
-if(!S||!S.items) S = seed();
+if(!S||!S.items||!S.members) S = seedSlots(seed());
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)) }catch(e){} }
 let crew = "All", view = "dashboard", openCode = null;
 let scanCode = "";
@@ -304,9 +329,14 @@ const ICONS = {
  productions:'<path d="M4 5h4v14H4zM10 5h4v9h-4zM16 5h4v6h-4z"/>',
  guide:'<circle cx="12" cy="5" r="2.2"/><path d="M8 21l1.5-9h5L16 21M9 12l-3 4M15 12l3 4M9.5 8.5h5"/>',
  stage:'<path d="M3 20h18M5 20V9l7-5 7 5v11"/><path d="M9 20v-5h6v5"/>',
- labels:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>'
+ labels:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"/><path d="M14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2"/>',
+ reunion:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M8 17h6"/>',
+ candidates:'<path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 15.6 7.1 18.2 8 12.7 4 8.8 9.5 8z"/>',
+ cast:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M17 11h4M19 9v4"/>',
+ points:'<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z"/><path d="M7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"/>',
+ messages:'<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'
 };
-const VIEWS = [["dashboard","Dashboard"],["inventory","Inventory"],["scan","Scan"],["productions","Productions"],["guide","Dressing guide"],["stage","Stage layout"],["labels","QR labels"]];
+const VIEWS = [["dashboard","Dashboard"],["reunion","Reunion"],["candidates","Degree sign-ups"],["cast","Cast sign-ups"],["productions","Productions"],["inventory","Inventory"],["scan","Scan"],["guide","Dressing guide"],["stage","Stage layout"],["labels","QR labels"],["points","Volunteer points"],["messages","Communications"]];
 function renderNav(){
   $("#navlist").innerHTML = VIEWS.map(([k,l])=>`<li><button type="button" data-view="${k}" ${k===view?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span class="t">${l}</span></button></li>`).join("");
 }
@@ -316,14 +346,14 @@ document.addEventListener("click",e=>{
   const o=e.target.closest("[data-open]"); if(o){openItem(o.dataset.open);return}
 });
 function go(v){view=v;try{history.replaceState(null,"","#"+v)}catch(e){}render();window.scrollTo(0,0)}
-$("#resetBtn").addEventListener("click",()=>{S=seed();save();closeDrawer();render();toast("Demo data reset")});
+$("#resetBtn").addEventListener("click",()=>{S=seedSlots(seed());save();closeDrawer();render();toast("Demo data reset")});
 
 /* ---------- views ---------- */
 function render(){
   renderNav();
   $("#viewTitle").textContent = VIEWS.find(v=>v[0]===view)[1];
   stopLoops();
-  const f = {dashboard,inventory,scan,productions,guide,stage,labels}[view];
+  const f = {dashboard,inventory,scan,productions,guide,stage,labels,reunion,candidates,cast,points,messages}[view];
   $("#view").innerHTML = ""; f($("#view"));
 }
 
@@ -342,6 +372,13 @@ function dashboard(el){
     <div class="panel tile ${notReady?"alert":""}"><span class="n">${notReady}</span><span class="l">Not ready (cleaning or repair)</span></div>
     <div class="panel tile ${secured<masks.length?"alert":""}"><span class="n">${secured}/${masks.length}</span><span class="l">Masks in the locked cabinet</span></div>
   </div>
+  <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Fall Reunion (sample)</h2><button class="btn" data-view="reunion">Open reunion</button></div>
+    <div class="grid g4" style="margin-top:12px">
+      <div class="tile"><span class="n">${S.candidates.length}</span><span class="l">Candidates signed up · ${S.candidates.filter(c=>c.status!=="Registered").length} confirmed</span></div>
+      <div class="tile"><span class="n">${S.slots.filter(x=>x.member).length}/${S.slots.length}</span><span class="l">Cast roles filled</span></div>
+      <div class="tile"><span class="n">${S.members.filter(m=>m.checkedIn).length}/${S.members.length}</span><span class="l">Volunteers checked in</span></div>
+      <div class="tile"><span class="n">${S.queue.length}</span><span class="l">Messages waiting for approval</span></div>
+    </div></div>
   <div class="grid g32">
     <div class="panel">
       <h2>Inventory by status</h2>
@@ -355,7 +392,7 @@ function dashboard(el){
   </div>
   <div class="grid g2">
     <div class="panel"><h2>Needs attention</h2>${attention()}</div>
-    <div class="panel"><h2>Recent activity</h2>${S.activity.length?`<ul class="log">${S.activity.slice(0,8).map(a=>`<li><time>${when(a.t)}</time> · <button class="btn" style="padding:0 6px;font-size:12px" data-open="${a.code}">${a.code}</button> ${esc(a.text)} <span class="muted">(${esc(a.by)})</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing yet. Scan a label to pull or return a piece, and it shows up here.</p>`}</div>
+    <div class="panel"><h2>Recent activity</h2>${S.activity.length?`<ul class="log">${S.activity.slice(0,8).map(a=>`<li><time>${when(a.t)}</time> · ${a.code?`<button class="btn" style="padding:0 6px;font-size:12px" data-open="${a.code}">${a.code}</button> `:""}${esc(a.text)} <span class="muted">(${esc(a.by)})</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing yet. Scan a label to pull or return a piece, and it shows up here.</p>`}</div>
   </div>`;
 }
 function attention(){
@@ -493,7 +530,7 @@ function productions(el){
     </div>
   </div>`;
   el.querySelectorAll("[data-sel]").forEach(b=>b.onclick=()=>{selProd=b.dataset.sel;render()});
-  el.querySelectorAll("[data-adv]").forEach(b=>b.onclick=()=>{const x=S.productions.find(y=>y.id===b.dataset.adv);x.stage=STAGES[STAGES.indexOf(x.stage)+1];selProd=x.id;save();render();toast(x.name+" · "+x.degree+" moved to "+x.stage)});
+  el.querySelectorAll("[data-adv]").forEach(b=>b.onclick=()=>{const x=S.productions.find(y=>y.id===b.dataset.adv);x.stage=STAGES[STAGES.indexOf(x.stage)+1];selProd=x.id;let k=0;if(x.stage==="Returned"&&!x.pointsAwarded){S.slots.filter(sl=>sl.prod===x.id&&sl.status==="Confirmed"&&sl.member).forEach(sl=>{award(sl.member,POINTS.cast,`Served as ${sl.role} · ${x.degree}`);k++});x.pointsAwarded=true}save();render();toast(x.name+" · "+x.degree+" moved to "+x.stage+(k?` · ${k} cast earned ${POINTS.cast} points`:""))});
   el.querySelectorAll("[data-pull]").forEach(b=>b.onclick=()=>{const i=item(b.dataset.pull);if(i.high){openItem(i.code);toast("Masks need the wardrobe lead's sign-out");return}act(i,"Pulled",`Pulled for ${p.name} · ${p.degree}`);render();toast(i.code+" pulled")});
   $("#pullAll").onclick=()=>{let k=0;kitCodes(p).map(item).forEach(i=>{if(i.status==="Ready"&&!i.high){act(i,"Pulled",`Pulled for ${p.name} · ${p.degree}`);k++}});render();toast(k?k+" pieces pulled":"Nothing ready left to pull")};
   $("#eod").onclick=()=>{
@@ -651,6 +688,134 @@ function labels(el){
   if(typeof QRCode!=="undefined") its.forEach(i=>{try{new QRCode(document.getElementById("qr-"+i.code),{text:i.code,width:104,height:104,correctLevel:QRCode.CorrectLevel.M})}catch(e){}});
   else el.querySelectorAll(".qr").forEach(q=>q.textContent="QR");
   el.querySelectorAll("[data-scantag]").forEach(b=>b.onclick=()=>{scanCode=b.dataset.scantag;go("scan")});
+}
+
+/* ---------- people helpers ---------- */
+const mem=id=>S.members.find(m=>m.id===id);
+const first=n=>n;
+function award(id,pts,text){const m=mem(id);if(!m)return;m.points+=pts;m.log.unshift({t:Date.now(),text,pts});S.activity.unshift({t:Date.now(),by:"Points",text:`${m.name} +${pts}: ${text}`,code:"",name:""});save()}
+const prodName=id=>{const p=S.productions.find(x=>x.id===id);return p?p.name+" · "+p.degree:""};
+const sampleNote=`<p class="note">Sample people with invented names. In the live system members are contacts in the Valley's account; volunteers and candidates sign up from forms in the member portal.</p>`;
+
+/* ---------- reunion ---------- */
+let rDay=0, rFilter="All", rCode="";
+function reunion(el){
+  const d=SCHEDULE[rDay];
+  el.innerHTML=`<div class="grid g4">
+    <div class="panel tile"><span class="n">${S.candidates.filter(c=>c.status==="Checked in"||c.status==="Conferred").length}/${S.candidates.length}</span><span class="l">Candidates checked in</span></div>
+    <div class="panel tile"><span class="n">${S.members.filter(m=>m.checkedIn).length}/${S.members.length}</span><span class="l">Volunteers checked in</span></div>
+    <div class="panel tile ${S.slots.some(x=>!x.member)?"alert":""}"><span class="n">${S.slots.filter(x=>!x.member).length}</span><span class="l">Cast roles still open</span></div>
+    <div class="panel tile"><span class="n">${S.productions.filter(p=>p.stage==="Reset").length}/${S.productions.length}</span><span class="l">Productions reset</span></div></div>
+  <div class="grid g32">
+    <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Schedule · run of show</h2>
+      <div class="row"><div class="seg" role="group" aria-label="Day">${SCHEDULE.map((x,k)=>`<button type="button" data-day="${k}" aria-pressed="${k===rDay}">${x.day.split(",")[0]}</button>`).join("")}</div>
+      <select id="rFilter" aria-label="Who">${["All","Crew","Cast","Candidates"].map(f=>`<option ${f===rFilter?"selected":""}>${f}</option>`).join("")}</select></div></div>
+      <p class="small muted" style="margin:6px 0 10px">${esc(d.day)}</p>
+      <ul class="pull">${d.items.filter(i=>rFilter==="All"||i[2]===rFilter||i[2]==="All").map(i=>`<li><span class="code" style="min-width:70px">${i[0]}</span><span>${esc(i[1])}</span><span class="pill">${i[2]}</span></li>`).join("")}</ul>
+      <p class="note" style="margin-top:12px">In the live system the schedule is a calendar in the Valley's account. Each item can send its own reminder, and crew call times feed the productions board.</p></div>
+    <div class="panel scanbox"><h2>Check-in</h2>
+      <p class="small muted" style="margin:0">Scan a member's badge or a candidate's confirmation QR, or type the code. Volunteers earn ${POINTS.checkin} points for checking in.</p>
+      <form class="scanfield" id="ciForm"><input id="ciIn" autocomplete="off" placeholder="MBR-001 or CND-001" value="${esc(rCode)}" aria-label="Badge code"><button class="btn primary">Check in</button></form>
+      <div id="ciOut"></div>
+      <h3 style="margin-top:6px">Not checked in yet</h3>
+      <div class="quick">${S.members.filter(m=>!m.checkedIn).map(m=>`<button type="button" data-ci="${m.id}">${m.id} ${esc(m.name)}</button>`).join("")}${S.candidates.filter(c=>c.status==="Registered"||c.status==="Confirmed").map(c=>`<button type="button" data-ci="${c.id}">${c.id} ${esc(c.name)}</button>`).join("")}</div>
+    </div></div>${sampleNote}`;
+  el.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{rDay=+b.dataset.day;render()});
+  $("#rFilter").onchange=e=>{rFilter=e.target.value;render()};
+  const checkin=code=>{
+    code=code.trim().toUpperCase(); rCode="";
+    const m=mem(code), c=S.candidates.find(x=>x.id===code);
+    if(m){ if(m.checkedIn){$("#ciOut").innerHTML=`<div class="banner ok">${esc(m.name)} is already checked in.</div>`;return}
+      m.checkedIn=true; award(m.id,POINTS.checkin,"Checked in at the Fall Reunion"); toast(m.name+" checked in · +"+POINTS.checkin+" points"); render(); return}
+    if(c){ if(c.status==="Checked in"||c.status==="Conferred"){$("#ciOut").innerHTML=`<div class="banner ok">${esc(c.name)} is already checked in.</div>`;return}
+      if(c.status==="Registered"){$("#ciOut").innerHTML=`<div class="banner bad">${esc(c.name)} is registered but not confirmed. Confirm the registration at the desk first.</div>`;return}
+      c.status="Checked in"; save(); toast(c.name+" checked in"); render(); return}
+    $("#ciOut").innerHTML=`<div class="banner bad">No member or candidate with code “${esc(code)}”.</div>`;
+  };
+  $("#ciForm").addEventListener("submit",e=>{e.preventDefault();checkin($("#ciIn").value)});
+  el.querySelectorAll("[data-ci]").forEach(b=>b.onclick=()=>checkin(b.dataset.ci));
+}
+
+/* ---------- degree sign-ups (candidates) ---------- */
+function candidates(el){
+  el.innerHTML=`<div class="kanban" style="grid-template-columns:repeat(4,minmax(200px,1fr))">${CAND_STAGES.map(st=>`<div class="col"><h4>${st}<span>${S.candidates.filter(c=>c.status===st).length}</span></h4>${S.candidates.filter(c=>c.status===st).map(c=>`<div class="card"><b>${esc(c.name)}</b><span class="muted">${esc(c.degrees)} · <span class="code">${c.id}</span></span><span class="small muted">From ${esc(c.from)}</span>${CAND_STAGES.indexOf(st)<3?`<div class="row"><button class="btn" data-cadv="${c.id}">Move to ${CAND_STAGES[CAND_STAGES.indexOf(st)+1]}</button></div>`:""}</div>`).join("")}</div>`).join("")}</div>
+  <div class="grid g2">
+    <div class="panel"><h2>Degree sign-up form</h2>
+      <p class="small muted" style="margin-top:0">What a candidate or his lodge sponsor fills in. In the live system it's a form on the Valley's site that creates the contact and the card above.</p>
+      <form id="candForm" class="scanbox">
+        <input type="text" id="cName" placeholder="Full name" required aria-label="Full name">
+        <select id="cDeg" aria-label="Degrees"><option>4°–14°</option><option>15°–18°</option><option>19°–32°</option><option>4°–32°</option></select>
+        <select id="cFrom" aria-label="How did you hear"><option>Website form</option><option>Lodge sponsor (sample)</option><option>Event table</option></select>
+        <button class="btn primary" style="align-self:flex-start">Sign up for the Fall Reunion</button>
+      </form></div>
+    <div class="panel"><h2>What happens next</h2><ul class="pull">
+      <li><span class="st st-Ready">Auto</span><span>Welcome email with what to expect (Communications)</span><span></span></li>
+      <li><span class="st st-Pulled">Desk</span><span>Registration confirmed; fees through the Valley's own invoices when they choose (not part of this demo)</span><span></span></li>
+      <li><span class="st st-In-use">Reunion</span><span>Scanned in at check-in; class lists by degree for the directors</span><span></span></li>
+      <li><span class="st st-Cleaning">After</span><span>Marked conferred; the record keeps his degree history</span><span></span></li></ul></div></div>${sampleNote}`;
+  el.querySelectorAll("[data-cadv]").forEach(b=>b.onclick=()=>{const c=S.candidates.find(x=>x.id===b.dataset.cadv);c.status=CAND_STAGES[CAND_STAGES.indexOf(c.status)+1];save();render();toast(c.name+" moved to "+c.status)});
+  $("#candForm").addEventListener("submit",e=>{e.preventDefault();const n=$("#cName").value.trim();if(!n)return;const id="CND-"+String(S.candidates.length+1).padStart(3,"0");S.candidates.push({id,name:n,degrees:$("#cDeg").value,status:"Registered",from:$("#cFrom").value});save();render();toast(n+" signed up · welcome email queued for approval");S.queue.unshift({t:Date.now(),tpl:"Candidate welcome and what to expect",to:n,ch:"Email"});save()});
+}
+
+/* ---------- cast sign-ups ---------- */
+function cast(el){
+  const castMembers=S.members.filter(m=>m.interest.includes("Cast"));
+  el.innerHTML=`<div class="grid g2">${S.productions.map(p=>`<div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(p.name)} · ${p.degree}</h2><span class="pill">${esc(p.stage)}</span></div><p class="small muted" style="margin:4px 0 8px">${esc(p.date)}</p>
+     <ul class="pull">${S.slots.filter(sl=>sl.prod===p.id).map(sl=>{const m=sl.member&&mem(sl.member);return `<li><span class="st ${sl.status==="Confirmed"?"st-Ready":sl.status==="Signed up"?"st-Pulled":"st-Repair"}">${sl.status}</span><span><b>${esc(sl.role)}</b><br>${m?`<span class="small">${esc(m.name)} <span class="code muted">${m.id}</span></span>`:`<select data-pick-slot="${sl.id}" aria-label="Sign up a member for ${esc(sl.role)}"><option value="">Sign up a member…</option>${castMembers.map(c=>`<option value="${c.id}">${esc(c.name)} · ${c.points} pts</option>`).join("")}</select>`}</span>${sl.status==="Signed up"?`<button class="btn" data-confirm="${sl.id}">Confirm</button>`:sl.status==="Confirmed"?`<button class="btn" data-release="${sl.id}">Release</button>`:"<span></span>"}</li>`}).join("")}</ul></div>`).join("")}</div>
+   <p class="note">Members sign up for open roles from the member portal; the degree director confirms. Confirmed cast get the cast confirmation message and their costume is pulled to their size. Serving earns ${POINTS.cast} volunteer points when the production is returned.</p>${sampleNote}`;
+  el.querySelectorAll("[data-pick-slot]").forEach(s=>s.onchange=()=>{if(!s.value)return;const sl=S.slots.find(x=>x.id===s.dataset.pickSlot);sl.member=s.value;sl.status="Signed up";save();render();toast(mem(s.value).name+" signed up for "+sl.role)});
+  el.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.confirm);sl.status="Confirmed";S.queue.unshift({t:Date.now(),tpl:"Cast confirmation",to:mem(sl.member).name,ch:"Email"});save();render();toast("Confirmed · cast confirmation queued for approval")});
+  el.querySelectorAll("[data-release]").forEach(b=>b.onclick=()=>{const sl=S.slots.find(x=>x.id===b.dataset.release);sl.member=null;sl.status="Open";save();render();toast("Role reopened")});
+}
+
+/* ---------- volunteer points ---------- */
+let pSel=null;
+function points(el){
+  const ranked=[...S.members].sort((a,b)=>b.points-a.points);
+  const sel=mem(pSel)||ranked[0]; pSel=sel.id;
+  const lvl=p=>p>=60?"Gold":p>=30?"Silver":"Bronze";
+  el.innerHTML=`<div class="grid g32">
+   <div class="panel"><h2>Leaderboard</h2><div class="tablewrap" style="border:0"><table style="min-width:0"><thead><tr><th>#</th><th>Member</th><th>Serves as</th><th>Level</th><th style="text-align:right">Points</th></tr></thead><tbody>${ranked.map((m,k)=>`<tr data-psel="${m.id}" style="${m.id===sel.id?"background:var(--accent-soft)":""}"><td class="muted">${k+1}</td><td><b>${esc(m.name)}</b> <span class="code muted">${m.id}</span>${m.checkedIn?' <span class="st st-Ready">Here</span>':""}</td><td class="small">${m.interest.join(", ")}</td><td>${lvl(m.points)}</td><td style="text-align:right;font-variant-numeric:tabular-nums"><b>${m.points}</b></td></tr>`).join("")}</tbody></table></div></div>
+   <div class="panel scanbox"><h2>${esc(sel.name)} · ${sel.points} points · ${lvl(sel.points)}</h2>
+     <form id="awardForm" class="row"><select id="aWhy" aria-label="Reason">${[["Crew shift","crew"],["Rehearsal","rehearsal"],["Served in a cast role","cast"]].map(([l,k])=>`<option value="${k}">${l} (+${POINTS[k]})</option>`).join("")}</select><button class="btn primary">Award points</button></form>
+     <ul class="log">${sel.log.slice(0,10).map(l=>`<li><time>${when(l.t)}</time> · <b>+${l.pts}</b> ${esc(l.text)}</li>`).join("")}</ul></div></div>
+  <div class="panel"><h2>Point rules (sample values)</h2><ul class="pull">
+    <li><span class="code">+${POINTS.cast}</span><span>Served in a cast role (added automatically when the production is returned)</span><span></span></li>
+    <li><span class="code">+${POINTS.crew}</span><span>Wardrobe or props crew shift</span><span></span></li>
+    <li><span class="code">+${POINTS.checkin}</span><span>Checked in as a reunion volunteer (automatic at check-in)</span><span></span></li>
+    <li><span class="code">+${POINTS.rehearsal}</span><span>Attended a rehearsal</span><span></span></li></ul>
+    <p class="note" style="margin-top:10px">The Valley sets the real values and levels. In the live system points are fields on each member's contact, added by workflows; officers see the leaderboard on their dashboard.</p></div>${sampleNote}`;
+  el.querySelectorAll("[data-psel]").forEach(r=>r.onclick=()=>{pSel=r.dataset.psel;render()});
+  $("#awardForm").addEventListener("submit",e=>{e.preventDefault();const k=$("#aWhy").value;award(sel.id,POINTS[k],$("#aWhy").selectedOptions[0].textContent.replace(/ \(\+\d+\)$/,""));render();toast(sel.name+" +"+POINTS[k]+" points")});
+}
+
+/* ---------- communications ---------- */
+let mSel="cast-confirm";
+function audience(t){
+  if(t.id==="cast-confirm") return S.slots.filter(x=>x.status==="Confirmed").map(x=>({m:mem(x.member),x}));
+  if(t.id==="rehearsal") return S.slots.filter(x=>x.member&&["P3","P4"].includes(x.prod)).map(x=>({m:mem(x.member),x}));
+  if(t.id==="crew-call") return S.members.filter(m=>m.interest.some(i=>i.includes("crew"))).map(m=>({m}));
+  if(t.id==="cand-welcome") return S.candidates.filter(c=>c.status==="Registered"||c.status==="Confirmed").map(c=>({c}));
+  return S.members.filter(m=>m.checkedIn||S.slots.some(x=>x.member===m.id&&x.status==="Confirmed")).map(m=>({m}));
+}
+function fill(t,a){
+  const p=a.x&&S.productions.find(y=>y.id===a.x.prod);
+  const name=a.m?a.m.name:a.c.name;
+  const earned=a.m?a.m.log.filter(l=>Date.now()-l.t<864e5*7).reduce((s,l)=>s+l.pts,0):0;
+  return t.body.replace("{first}",first(name)).replace("{role}",a.x?a.x.role:"").replace("{degree}",p?p.degree:"").replace("{date}",p?p.date.replace(" (sample)",""):"").replace("{call}",p&&p.date.startsWith("Sat")?"6:30 AM":"7:00 AM").replace("{degrees}",a.c?a.c.degrees:"").replace("{pts}",earned).replace("{total}",a.m?a.m.points:"");
+}
+function messages(el){
+  const t=TEMPLATES.find(x=>x.id===mSel), aud=audience(t), ex=aud[0];
+  el.innerHTML=`<div class="grid g32">
+    <div class="panel"><h2>Message templates</h2><ul class="pull">${TEMPLATES.map(x=>`<li><span class="pill">${x.ch}</span><span><button class="btn" style="padding:2px 8px;${x.id===mSel?"border-color:var(--accent)":""}" data-tpl="${x.id}">${esc(x.name)}</button><br><span class="small muted">To: ${esc(x.aud)} · ${audience(x).length} people</span></span><span></span></li>`).join("")}</ul></div>
+    <div class="panel scanbox"><h2>${esc(t.name)}</h2><span class="small muted">${t.ch} to ${esc(t.aud)} · ${aud.length} recipient${aud.length===1?"":"s"}</span>
+      ${ex?`<div class="note" style="white-space:pre-wrap;color:var(--fg);background:var(--sunk)">${esc(fill(t,ex))}</div><span class="small muted">Preview for ${esc(ex.m?ex.m.name:ex.c.name)}</span>`:`<div class="note">Nobody matches this audience yet.</div>`}
+      ${t.ch==="SMS"?`<p class="note" style="margin:0">Texts go out only after the Valley's number is registered with the carriers, and only to members who opted in.</p>`:""}
+      <button class="btn primary" id="queueBtn" ${aud.length?"":"disabled"} style="align-self:flex-start">Queue for officer approval</button></div></div>
+  <div class="panel"><h2>Waiting for approval</h2>${S.queue.length?`<ul class="log">${S.queue.slice(0,12).map(q=>`<li><time>${when(q.t)}</time> · ${esc(q.tpl)} (${q.ch}) to ${esc(q.to)} · <span class="muted">waiting for an officer</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing queued. Confirming a cast member or signing up a candidate queues their message here.</p>`}
+  <p class="note" style="margin-top:10px">Demo: nothing is sent from this page. In the live system an officer approves each batch, and the messages go out from the Valley's own account with their name and reply address.</p></div>`;
+  el.querySelectorAll("[data-tpl]").forEach(b=>b.onclick=()=>{mSel=b.dataset.tpl;render()});
+  $("#queueBtn").onclick=()=>{S.queue.unshift({t:Date.now(),tpl:t.name,to:aud.length+" recipients",ch:t.ch});save();render();toast(t.name+" queued for approval · nothing sent")};
 }
 
 /* ---------- boot ---------- */

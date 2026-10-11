@@ -20,6 +20,13 @@ Labels: REAL = confirmed by an API read on 2026-10-11 · INFERRED = expected fro
 
 Live status inside the 3D viewer is **not** in the demo: a page can't safely read the account's records from the browser (it would need an API key in the page). The marker links straight to the record, which shows live status natively. That keeps the security line and stays native.
 
+| I | Reunion schedule + run of show | **Calendar** (event calendar) with per-item reminders | UI | INFERRED |
+| J | Check-in (volunteers, candidates) | QR badge → contact record / form; check-in tag + workflow | as module B | INFERRED |
+| K | Degree sign-ups (candidates) | **Form** on the Valley's site → contact + **pipeline "Candidates"** (Registered → Confirmed → Checked in → Conferred); fees via invoices only if the Valley wants (T2) | form/pipeline UI; opportunities API | opportunities REAL |
+| L | Cast sign-ups | Member-portal **form/survey** per open role → **custom object "Cast assignment"** (or opportunity) linked to contact, role, production; director confirms | object/records API | REAL (records); form INFERRED |
+| M | Volunteer points | Contact fields **Volunteer points** + **Level**; workflows add points on check-in, crew shift, rehearsal, served role; leaderboard via smart list sorted by points | fields API; workflows UI | fields REAL |
+| N | Communications | Email/SMS **templates** + workflows, officer approval before each batch; SMS only after A2P registration and opt-in | templates API (REAL, piloted VT-872); workflows UI | REAL / INFERRED |
+
 ## 2. Inventory Item fields (DEMO)
 Item code (DEMO-WR-001…) · Department (Wardrobe / Props) · Type · Degree · Role · Size · Location (rack/bin/cabinet) · Status (Ready / Pulled / In use / Cleaning / Repair / Retired) · Condition · High value (checkbox) · Insured value · Photo · Last production (text)
 Seed: `clients/test-lab/backups/VT-875-valley-demo-seed.json` (22 records: 10 wardrobe, 10 props, 2 masks; also the bulk backup).
