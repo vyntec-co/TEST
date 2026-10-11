@@ -70,6 +70,11 @@ button{cursor:pointer}
 .tile .n{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
 .tile .l{color:var(--muted);font-size:13px}
 .tile.alert .n{color:var(--bad)}
+button.tile{font:inherit;color:inherit;text-align:left;cursor:pointer;width:100%}
+.tile:not(.panel).click{border:1px solid transparent;border-radius:10px;background:none;padding:8px}
+.tile.click:hover{border-color:var(--accent);background:var(--accent-soft)}
+.bar i.click{cursor:pointer}.bar i.click:hover{filter:brightness(1.15)}
+.legend button.click{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:2px 4px;border-radius:4px;display:inline-flex;align-items:center;gap:5px}.legend button.click:hover{background:var(--sunk)}
 .muted{color:var(--muted)}
 .small{font-size:13px}
 .note{font-size:13px;color:var(--muted);background:var(--sunk);border-radius:6px;padding:8px 10px}
@@ -401,11 +406,12 @@ function renderNav(){
   $("#navlist").innerHTML = navViews().map(([k,l])=>`<li><button type="button" data-view="${k}" ${k===view?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg><span class="t">${l}</span></button></li>`).join("");
 }
 document.addEventListener("click",e=>{
-  const v=e.target.closest("[data-view]"); if(v){go(v.dataset.view);return}
+  const v=e.target.closest("[data-view]"); if(v){if(v.dataset.invs!==undefined){invS=v.dataset.invs;invQ="";invD=""} if(v.dataset.prod)selProd=v.dataset.prod; go(v.dataset.view);return}
   const c=e.target.closest("[data-crew]"); if(c){crew=c.dataset.crew;document.querySelectorAll("#crewSeg button").forEach(b=>b.setAttribute("aria-pressed",String(b===c)));render();return}
   const rm=e.target.closest("[data-room]"); if(rm){roomFocus=rm.dataset.room;closeDrawer();go("room");return}
   const o=e.target.closest("[data-open]"); if(o){openItem(o.dataset.open);return}
 });
+document.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[role=button][data-view],[role=button][data-open]")){e.preventDefault();e.target.click()}});
 function go(v){view=v;try{history.replaceState(null,"","#"+v)}catch(e){}render();window.scrollTo(0,0)}
 $("#resetBtn").addEventListener("click",()=>{S=seedSlots(seed());save();closeDrawer();render();toast("Demo data reset")});
 
@@ -428,52 +434,53 @@ function dashboard(el){
   const out=n("Pulled")+n("In use"), notReady=n("Cleaning")+n("Repair");
   const masks=S.items.filter(i=>i.high), secured=masks.filter(i=>i.status==="Ready").length;
   const flagged=its.filter(i=>i.flag).length;
-  const seg=(dept)=>{const a=S.items.filter(i=>i.dept===dept);return STATUSES.map(s=>{const k=a.filter(i=>i.status===s).length;return k?`<i style="width:${k/a.length*100}%;background:var(${STATUS_VAR[s]})" title="${s}: ${k}"></i>`:""}).join("")};
+  const seg=(dept)=>{const a=S.items.filter(i=>i.dept===dept);return STATUSES.map(s=>{const k=a.filter(i=>i.status===s).length;return k?`<i class="click" data-view="inventory" data-invs="${s}" role="button" tabindex="0" aria-label="${s}: ${k}, open in inventory" style="width:${k/a.length*100}%;background:var(${STATUS_VAR[s]})" title="${s}: ${k}"></i>`:""}).join("")};
   const next=S.productions.filter(p=>p.stage!=="Reset");
   el.innerHTML=`
   ${flagged?`<div class="banner bad"><b>${flagged} item${flagged>1?"s":""} not returned after the end-of-day check.</b> <button class="btn" data-view="productions">Open productions</button></div>`:""}
   <div class="grid g4">
-    <div class="panel tile"><span class="n">${n("Ready")}</span><span class="l">Ready to pull</span></div>
-    <div class="panel tile"><span class="n">${out}</span><span class="l">Out today (pulled or in use)</span></div>
-    <div class="panel tile ${notReady?"alert":""}"><span class="n">${notReady}</span><span class="l">Not ready (cleaning or repair)</span></div>
-    <div class="panel tile ${secured<masks.length?"alert":""}"><span class="n">${secured}/${masks.length}</span><span class="l">Masks in the locked cabinet</span></div>
+    <button type="button" class="panel tile click" data-view="inventory" data-invs="Ready"><span class="n">${n("Ready")}</span><span class="l">Ready to pull</span></button>
+    <button type="button" class="panel tile click" data-view="inventory" data-invs="__out"><span class="n">${out}</span><span class="l">Out today (pulled or in use)</span></button>
+    <button type="button" class="panel tile click ${notReady?"alert":""}" data-view="inventory" data-invs="__notready"><span class="n">${notReady}</span><span class="l">Not ready (cleaning or repair)</span></button>
+    <button type="button" class="panel tile click ${secured<masks.length?"alert":""}" data-view="inventory" data-invs="__hv"><span class="n">${secured}/${masks.length}</span><span class="l">Masks in the locked cabinet</span></button>
   </div>
   <div class="panel"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Fall Reunion (sample)</h2><button class="btn" data-view="reunion">Open reunion</button></div>
     <div class="grid g4" style="margin-top:12px">
-      <div class="tile"><span class="n">${S.candidates.length}</span><span class="l">Candidates signed up · ${S.candidates.filter(c=>c.status!=="Registered").length} confirmed</span></div>
-      <div class="tile"><span class="n">${S.slots.filter(x=>x.member).length}/${S.slots.length}</span><span class="l">Cast roles filled</span></div>
-      <div class="tile"><span class="n">${S.members.filter(m=>m.checkedIn).length}/${S.members.length}</span><span class="l">Volunteers checked in</span></div>
-      <div class="tile"><span class="n">${S.queue.length}</span><span class="l">Messages waiting for approval</span></div>
+      <button type="button" class="tile click" data-view="candidates"><span class="n">${S.candidates.length}</span><span class="l">Candidates signed up · ${S.candidates.filter(c=>c.status!=="Registered").length} confirmed</span></button>
+      <button type="button" class="tile click" data-view="cast"><span class="n">${S.slots.filter(x=>x.member).length}/${S.slots.length}</span><span class="l">Cast roles filled</span></button>
+      <button type="button" class="tile click" data-view="reunion"><span class="n">${S.members.filter(m=>m.checkedIn).length}/${S.members.length}</span><span class="l">Volunteers checked in</span></button>
+      <button type="button" class="tile click" data-view="messages"><span class="n">${S.queue.length}</span><span class="l">Messages waiting for approval</span></button>
     </div></div>
   <div class="grid g32">
     <div class="panel">
       <h2>Inventory by status</h2>
       ${["Wardrobe","Props"].filter(d=>crew==="All"||crew===d).map(d=>`<div style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><b class="small">${d}</b><span class="small muted">${S.items.filter(i=>i.dept===d).length} pieces in demo · about 300 in the real collection</span></div><div class="bar" style="margin-top:6px">${seg(d)}</div></div>`).join("")}
-      <div class="legend">${STATUSES.map(s=>`<span><b style="background:var(${STATUS_VAR[s]})"></b>${s}</span>`).join("")}</div>
+      <div class="legend">${STATUSES.map(s=>`<button type="button" class="click" data-view="inventory" data-invs="${s}"><b style="background:var(${STATUS_VAR[s]})"></b>${s}</button>`).join("")}</div>
     </div>
     <div class="panel">
       <h2>Upcoming productions</h2>
-      <ul class="pull">${next.map(p=>{const g=gaps(p).length;return `<li><span class="code">${esc(p.degree)}</span><span>${esc(p.name)}<br><span class="small muted">${esc(p.date)} · ${esc(p.stage)}</span></span>${g?`<span class="gap">${g} gap${g>1?"s":""}</span>`:`<span class="st st-Ready">Kit ready</span>`}</li>`}).join("")}</ul>
+      <ul class="pull">${next.map(p=>{const g=gaps(p).length;return `<li class="pick-row" data-view="productions" data-prod="${p.id}" role="button" tabindex="0"><span class="code">${esc(p.degree)}</span><span>${esc(p.name)}<br><span class="small muted">${esc(p.date)} · ${esc(p.stage)}</span></span>${g?`<span class="gap">${g} gap${g>1?"s":""}</span>`:`<span class="st st-Ready">Kit ready</span>`}</li>`}).join("")}</ul>
     </div>
   </div>
   <div class="grid g2">
     <div class="panel"><h2>Needs attention</h2>${attention()}</div>
-    <div class="panel"><h2>Recent activity</h2>${S.activity.length?`<ul class="log">${S.activity.slice(0,8).map(a=>`<li><time>${when(a.t)}</time> · ${a.code?`<button class="btn" style="padding:0 6px;font-size:12px" data-open="${a.code}">${a.code}</button> `:""}${esc(a.text)} <span class="muted">(${esc(a.by)})</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing yet. Scan a label to pull or return a piece, and it shows up here.</p>`}</div>
+    <div class="panel"><h2>Recent activity</h2>${S.activity.length?`<ul class="log">${S.activity.slice(0,8).map(a=>`<li ${a.code?`class="pick-row" data-open="${a.code}" role="button" tabindex="0"`:""}><time>${when(a.t)}</time> · ${a.code?`<button class="btn" style="padding:0 6px;font-size:12px" data-open="${a.code}">${a.code}</button> `:""}${esc(a.text)} <span class="muted">(${esc(a.by)})</span></li>`).join("")}</ul>`:`<p class="muted small" style="margin:0">Nothing yet. Scan a label to pull or return a piece, and it shows up here.</p>`}</div>
   </div>`;
 }
 function attention(){
   const its=visible().filter(i=>i.flag||i.status==="Repair"||i.status==="Cleaning"||(i.high&&i.status!=="Ready"));
   if(!its.length) return `<p class="muted small" style="margin:0">Everything is back and ready.</p>`;
-  return `<ul class="pull">${its.map(i=>`<li>${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-open="${i.code}">${i.code}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}<br><span class="small muted">${esc(i.condition)} · ${esc(i.location)}</span></span><span></span></li>`).join("")}</ul>`;
+  return `<ul class="pull">${its.map(i=>`<li class="pick-row" data-open="${i.code}" role="button" tabindex="0">${chip(i.status)}<span><button class="btn" style="padding:0 6px;font-size:12.5px" data-open="${i.code}">${i.code}</button> ${esc(i.name)} ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}<br><span class="small muted">${esc(i.condition)} · ${esc(i.location)}</span></span><span></span></li>`).join("")}</ul>`;
 }
 
 let invQ="", invS="", invD="";
+const INV_GROUPS={__out:["Out today (pulled or in use)",i=>i.status==="Pulled"||i.status==="In use"],__notready:["Not ready (cleaning or repair)",i=>i.status==="Cleaning"||i.status==="Repair"],__hv:["High value (masks)",i=>i.high]};
 function inventory(el){
   const degs=[...new Set(S.items.map(i=>i.degree))];
   el.innerHTML=`
   <div class="filters">
     <input type="search" id="invQ" placeholder="Search code, name, location" value="${esc(invQ)}" aria-label="Search inventory">
-    <select id="invS" aria-label="Status"><option value="">All statuses</option>${STATUSES.map(s=>`<option ${s===invS?"selected":""}>${s}</option>`).join("")}</select>
+    <select id="invS" aria-label="Status"><option value="">All statuses</option>${Object.entries(INV_GROUPS).map(([k,g])=>`<option value="${k}" ${k===invS?"selected":""}>${g[0]}</option>`).join("")}${STATUSES.map(s=>`<option ${s===invS?"selected":""}>${s}</option>`).join("")}</select>
     <select id="invD" aria-label="Degree"><option value="">All degrees</option>${degs.map(d=>`<option ${d===invD?"selected":""}>${d}</option>`).join("")}</select>
     <span class="small muted" id="invCount"></span>
   </div>
@@ -481,7 +488,7 @@ function inventory(el){
   <p class="note">In the live system this is the Valley's Inventory Item object inside their account: the same list, filters and record pages, with the crew's own saved views.</p>`;
   const draw=()=>{
     const q=invQ.toLowerCase();
-    const rows=visible().filter(i=>(!invS||i.status===invS)&&(!invD||i.degree===invD)&&(!q||(i.code+" "+i.name+" "+i.location+" "+i.type).toLowerCase().includes(q)));
+    const rows=visible().filter(i=>(!invS||(INV_GROUPS[invS]?INV_GROUPS[invS][1](i):i.status===invS))&&(!invD||i.degree===invD)&&(!q||(i.code+" "+i.name+" "+i.location+" "+i.type).toLowerCase().includes(q)));
     $("#invBody").innerHTML=rows.map(i=>`<tr data-open="${i.code}" tabindex="0"><td class="code">${i.code}</td><td><b>${esc(i.name)}</b> ${i.high?'<span class="hv">HIGH VALUE</span>':""} ${i.flag?'<span class="flag">NOT RETURNED</span>':""}</td><td>${i.dept}</td><td>${esc(i.type)}</td><td>${i.degree}</td><td>${esc(i.size)}</td><td>${esc(i.location)}</td><td>${chip(i.status)}</td><td>${esc(i.condition)}</td></tr>`).join("")||`<tr><td colspan="9" class="muted">No pieces match these filters.</td></tr>`;
     $("#invCount").textContent=rows.length+" of "+visible().length+" pieces";
   };
